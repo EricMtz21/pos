@@ -35,5 +35,14 @@ contextBridge.exposeInMainWorld('api', {
     preview: (saleId) => call('ticket:preview', saleId),
     print: (saleId) => call('ticket:print', saleId),
     savePdf: (saleId) => call('ticket:savePdf', saleId)
+  },
+  reports: {
+    get: (range) => call('reports:get', range),
+    export: (range) => call('reports:export', range)
+  },
+  cashCuts: {
+    preview: (args) => call('cashCuts:preview', args),
+    create: (args) => call('cashCuts:create', args),
+    list: (limit) => call('cashCuts:list', limit)
   }
 })

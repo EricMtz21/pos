@@ -1,6 +1,7 @@
 import { icon } from '../icons.js'
 import { renderInventory } from './inventory.js'
 import { renderSales } from './sales.js'
+import { renderReports } from './reports.js'
 
 // Vista provisional. También comprueba de punta a punta renderer → IPC → SQLite.
 async function renderPlaceholder(view, container) {
@@ -41,8 +42,7 @@ export const views = [
     icon: 'chart-column',
     keys: 'Ctrl+R',
     subtitle: 'Ventas, comisiones y corte de caja',
-    phase: 5,
-    render: (c) => renderPlaceholder(views[2], c)
+    render: renderReports
   },
   {
     id: 'settings',

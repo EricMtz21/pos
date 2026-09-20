@@ -1,6 +1,7 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, dialog } from 'electron'
 import { renderTicket } from '../../shared/business/ticket.js'
 import { printTicket, saveTicketPdf } from '../ticket-print.js'
+import { writeReport, reportFileName } from '../export-excel.js'
 
 // Todo handler responde { ok, data } | { ok: false, error } para que el renderer reciba
 // mensajes limpios (Electron antepone texto técnico a los errores lanzados desde handle).
@@ -15,8 +16,8 @@ function handle(channel, fn) {
   })
 }
 
-export function registerIpc({ repos, appInfo }) {
-  const { settings, categories, products, sales } = repos
+export function registerIpc({ repos, appInfo, backup }) {
+  const { settings, categories, products, sales, reports, cashCuts } = repos
 
   // Opciones de ticket vigentes, para imprimir y para la vista previa.
   const ticketOptions = () => {
@@ -62,5 +63,43 @@ export function registerIpc({ repos, appInfo }) {
     const sale = sales.get(saleId)
     if (!sale) throw new Error('Venta no encontrada')
     return saveTicketPdf(sale, ticketOptions(), BrowserWindow.fromWebContents(event.sender))
+  })
+
+  // Todo lo que pinta la pantalla de reportes, en una sola llamada.
+  const reportData = (range) => ({
+    ...range,
+    summary: reports.summary(range),
+    byDay: reports.byDay(range),
+    byMethod: reports.byMethod(range),
+    topProducts: reports.topProducts(range),
+    sales: reports.sales(range),
+    cuts: cashCuts.list()
+  })
+
+  handle('reports:get', (range) => reportData(range))
+
+  handle('reports:export', async (range, event) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {
+      title: 'Exportar reporte',
+      defaultPath: reportFileName(range),
+      filters: [{ name: 'Excel', extensions: ['xlsx'] }]
+    })
+    if (canceled || !filePath) return null
+    return writeReport({ ...reportData(range), business: settings.get('business') }, filePath)
+  })
+
+  handle('cashCuts:preview', (args) => cashCuts.preview(args))
+  handle('cashCuts:list', (limit) => cashCuts.list(limit))
+
+  handle('cashCuts:create', (args) => {
+    const cut = cashCuts.create(args)
+    // §6: respaldo automático de la base en cada corte de caja.
+    try {
+      backup?.('corte')
+    } catch (err) {
+      // El corte ya quedó registrado; un respaldo fallido no debe deshacerlo.
+      console.error('[ipc] respaldo tras el corte falló:', err)
+    }
+    return cut
   })
 }

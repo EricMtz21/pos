@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, shell } from 'electron'
 import { join } from 'node:path'
 import { openDatabase } from './db/connection.js'
 import { createRepos } from './db/repos/index.js'
+import { backupDatabase } from './db/backup.js'
 import { seedSampleData } from './db/seed.js'
 import { registerIpc } from './ipc/index.js'
 
@@ -45,11 +46,16 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(null)
 
   const dataDir = app.getPath('userData')
-  db = openDatabase(join(dataDir, 'pos.sqlite'), { backupDir: join(dataDir, 'backups') })
+  const backupDir = join(dataDir, 'backups')
+  db = openDatabase(join(dataDir, 'pos.sqlite'), { backupDir })
   const repos = createRepos(db)
   if (!app.isPackaged && process.env.POS_SEED === '1') seedSampleData(repos)
 
-  registerIpc({ repos, appInfo: { name: app.getName(), version: app.getVersion() } })
+  registerIpc({
+    repos,
+    appInfo: { name: app.getName(), version: app.getVersion() },
+    backup: (label) => backupDatabase(db, backupDir, label)
+  })
   createWindow()
 
   app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && createWindow())

@@ -16,9 +16,9 @@ const tmp = () => mkdtempSync(join(tmpdir(), 'pos-test-'))
 test('migraciones: crea el esquema y es idempotente', () => {
   const db = new Database(':memory:')
   const first = migrate(db, migrations)
-  assert.deepEqual(first.applied, [1])
+  assert.deepEqual(first.applied, migrations.map((m) => m.version))
   const second = migrate(db, migrations)
-  assert.deepEqual(second.applied, [])
+  assert.deepEqual(second.applied, [], 'correr de nuevo no aplica nada')
   assert.equal(getSchemaVersion(db), migrations.at(-1).version)
   assert.equal(db.prepare('SELECT COUNT(*) c FROM schema_version').get().c, 1)
 
@@ -30,12 +30,13 @@ test('migraciones: crea el esquema y es idempotente', () => {
 
 test('migraciones: una migración que falla no deja cambios ni sube la versión', () => {
   const db = new Database(':memory:')
+  const last = migrations.at(-1).version
   const bad = [
-    migrations[0],
-    { version: 2, name: 'rota', up: (d) => { d.exec('CREATE TABLE tmp (id INTEGER)'); throw new Error('boom') } }
+    ...migrations,
+    { version: last + 1, name: 'rota', up: (d) => { d.exec('CREATE TABLE tmp (id INTEGER)'); throw new Error('boom') } }
   ]
   assert.throws(() => migrate(db, bad), /boom/)
-  assert.equal(getSchemaVersion(db), 1)
+  assert.equal(getSchemaVersion(db), last, 'las migraciones buenas previas sí quedaron aplicadas')
   assert.equal(db.prepare("SELECT COUNT(*) c FROM sqlite_master WHERE name = 'tmp'").get().c, 0)
 })
 
@@ -48,27 +49,30 @@ test('backup previo a migrar: solo si la base ya tenía datos', () => {
   const dir = tmp()
   const file = join(dir, 'pos.sqlite')
   const backups = join(dir, 'backups')
+  const current = migrations.at(-1).version
+  let db
   try {
     openDatabase(file, { backupDir: backups }).close()
     assert.throws(() => readdirSync(backups), /ENOENT/, 'base nueva: no debe haber backup')
 
-    // Simula una app vieja (versión 1) con una migración nueva pendiente.
-    const db = new Database(file)
-    const next = { version: 2, name: 'extra', up: (d) => d.exec('CREATE TABLE extra (id INTEGER)') }
+    // Simula una instalación ya al día a la que le llega una migración nueva.
+    db = new Database(file)
+    const next = { version: current + 1, name: 'extra', up: (d) => d.exec('CREATE TABLE extra (id INTEGER)') }
     let called = null
     migrate(db, [...migrations, next], {
       beforeMigrate: (info) => { called = info; backupDatabase(db, backups, 'pre-migrate') }
     })
-    assert.deepEqual(called, { from: 1, to: 2 })
+    assert.deepEqual(called, { from: current, to: current + 1 })
     const files = readdirSync(backups)
     assert.equal(files.length, 1)
     assert.match(files[0], /pre-migrate\.sqlite$/)
 
     const copy = new Database(join(backups, files[0]), { readonly: true })
-    assert.equal(getSchemaVersion(copy), 1, 'el backup guarda el estado previo a migrar')
+    assert.equal(getSchemaVersion(copy), current, 'el backup guarda el estado previo a migrar')
     copy.close()
-    db.close()
   } finally {
+    // Cerrar siempre: en Windows, un archivo abierto no se puede borrar (EBUSY).
+    db?.close()
     rmSync(dir, { recursive: true, force: true })
   }
 })

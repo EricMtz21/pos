@@ -63,12 +63,14 @@ export function createSalesRepo(db, { settings, products, audit }) {
       }
 
       // Comisión por cada cobro con tarjeta, con el volumen acumulado ANTES de esta venta.
+      // Se guarda también en cada pago para poder desglosarla por método en los reportes.
       const config = settings.get('cardCommission')
       const volume = config?.enabled ? cardVolume(config.period) : 0
-      const commissions = payments
-        .filter((p) => isCardMethod(p.method))
-        .map((p) => calculateCommission({ config, method: p.method, amount: p.amount, volume }))
-      const commissionAmount = commissions.reduce((sum, c) => sum + c.amount, 0)
+      const withCommission = payments.map((p) => ({
+        ...p,
+        commission: calculateCommission({ config, method: p.method, amount: p.amount, volume }).amount
+      }))
+      const commissionAmount = withCommission.reduce((sum, p) => sum + p.commission, 0)
       // Tasa representativa para el histórico; con pago mixto se guarda la efectiva.
       const cardTotal = payments.filter((p) => isCardMethod(p.method)).reduce((s, p) => s + p.amount, 0)
       const commissionRate = cardTotal ? Number(((commissionAmount / cardTotal) * 100).toFixed(4)) : 0
@@ -107,7 +109,9 @@ export function createSalesRepo(db, { settings, products, audit }) {
         `INSERT INTO sale_items (sale_id, product_id, name_snapshot, qty, unit_price, discount, line_total)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
-      const insertPayment = db.prepare('INSERT INTO payments (sale_id, method, amount) VALUES (?, ?, ?)')
+      const insertPayment = db.prepare(
+        'INSERT INTO payments (sale_id, method, amount, commission_amount) VALUES (?, ?, ?, ?)'
+      )
       const moveStock = db.prepare("UPDATE products SET stock = stock - ? WHERE id = ?")
       const insertMove = db.prepare(
         "INSERT INTO inventory_moves (product_id, type, qty, reason, user_id) VALUES (?, 'sale', ?, ?, ?)"
@@ -118,7 +122,7 @@ export function createSalesRepo(db, { settings, products, audit }) {
         moveStock.run(line.qty, line.productId)
         insertMove.run(line.productId, -line.qty, folio, userId)
       }
-      for (const p of payments) insertPayment.run(saleId, p.method, p.amount)
+      for (const p of withCommission) insertPayment.run(saleId, p.method, p.amount, p.commission)
 
       audit.log({ entity: 'sale', entityId: saleId, action: 'create', after: { folio, total: totals.total }, userId })
       return get(saleId)

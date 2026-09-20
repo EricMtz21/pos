@@ -17,6 +17,10 @@ archivo local que puedes respaldar copiando y pegar.
 - **Comisiones de tarjeta configurables por tramos**, con el porcentaje que baja según el
   volumen acumulado del mes. Al cobrar ves cuánto recibe realmente el negocio.
 - **Ticket** para impresora térmica de 58 u 80 mm, o exportado a PDF.
+- **Reportes por rango de fechas** con desglose por método de pago, productos más vendidos
+  y exportación a Excel.
+- **Corte de caja** con arqueo: compara lo que debería haber en el cajón contra lo que
+  contaste y registra la diferencia.
 - **Modo claro y oscuro**, con acento configurable.
 
 ## Cómo funcionan los precios
@@ -49,6 +53,8 @@ Cada botón muestra su atajo. `F1` abre la lista completa desde cualquier pantal
 | `Ctrl+P` | Reimprimir el último ticket |
 | `Ctrl+I` | Ir a Inventario |
 | `Ctrl+R` | Ir a Reportes |
+| `Ctrl+B` | Corte de caja |
+| `Ctrl+E` | Exportar el reporte a Excel |
 | `Ctrl+,` | Ir a Ajustes |
 | `Ctrl+D` | Alternar modo claro/oscuro |
 | `+` / `-` | Cambiar la cantidad del artículo seleccionado |
@@ -62,6 +68,22 @@ Cada botón muestra su atajo. `F1` abre la lista completa desde cualquier pantal
 Alta de productos manual o por código de barras, búsqueda y filtros, ajustes de stock
 con motivo registrado, y baja lógica: un producto desactivado desaparece de la venta
 pero las ventas anteriores lo conservan.
+
+## Reportes y corte de caja
+
+![Reportes](docs/reportes.png)
+
+Los reportes se filtran por rango de fechas y separan lo que vendiste de lo que
+**realmente recibes**: cada método de pago muestra su bruto, su comisión y su neto.
+Un pago mixto se reparte correctamente entre efectivo y tarjeta.
+
+El corte de caja calcula cuánto debería haber en el cajón (fondo inicial + ventas en
+efectivo) y lo compara con lo que contaste, registrando el sobrante o el faltante.
+Cada corte guarda además un respaldo automático de la base de datos.
+
+La exportación a Excel genera un libro con seis hojas: resumen, ventas por día,
+métodos de pago, productos, detalle de ventas y cortes de caja. Los importes van en
+pesos con formato de moneda, listos para usar en fórmulas.
 
 ## Instalación para desarrollo
 
@@ -93,6 +115,7 @@ POS_SEED=1 npm run dev
 | `npm test` | Pruebas de la lógica de negocio y la capa de datos |
 | `npm run smoke` | Prueba de interfaz: maneja el inventario en la app real |
 | `npm run smoke:sales` | Prueba de interfaz: flujo completo de venta |
+| `npm run smoke:reports` | Prueba de interfaz: reportes, corte de caja y exportación |
 
 ## Dónde viven los datos
 
@@ -121,6 +144,7 @@ src/
 ├─ main/            Proceso principal (Node)
 │  ├─ db/           Conexión, migraciones, respaldos y repositorios
 │  ├─ ipc/          Puente con la interfaz
+│  ├─ export-excel.js
 │  └─ ticket-print.js
 ├─ preload/         API segura expuesta a la interfaz
 ├─ renderer/        Interfaz (HTML, CSS y JS sin framework)
@@ -138,10 +162,11 @@ proceso principal siempre recalcula al guardar: nunca confía en lo que le manda
 
 ## Estado
 
-Funcionando: ventas, inventario, comisiones de tarjeta, ticket e impresión.
+Funcionando: ventas, inventario, comisiones de tarjeta, ticket e impresión, reportes
+con exportación a Excel y corte de caja.
 
-En camino: reportes con exportación a Excel, corte de caja, pantalla de ajustes,
-cancelaciones y devoluciones, roles de usuario y actualizaciones automáticas.
+En camino: pantalla de ajustes, cancelaciones y devoluciones, roles de usuario y
+actualizaciones automáticas.
 
 ## Tecnologías
 

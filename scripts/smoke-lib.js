@@ -33,7 +33,12 @@ export async function setup({ prefix = 'smoke' } = {}) {
       if (await run(`Boolean(${js})`)) return true
       await sleep(50)
     }
-    problems.push(`agotó la espera: ${label}`)
+    // Al agotarse, se informa qué había en pantalla: un timeout a secas no dice nada.
+    const contexto = await run(`({
+      toast: [...document.querySelectorAll('.toast')].at(-1)?.textContent.trim() ?? '(ninguno)',
+      dialog: document.querySelector('dialog[open] h2')?.textContent ?? '(ninguno)'
+    })`).catch(() => ({ toast: '?', dialog: '?' }))
+    problems.push(`agotó la espera: ${label} · último aviso: "${contexto.toast}" · modal abierto: ${contexto.dialog}`)
     return false
   }
 
@@ -43,8 +48,10 @@ export async function setup({ prefix = 'smoke' } = {}) {
     problems,
     waitFor,
     check: (cond, msg) => !cond && problems.push(msg),
-    shot: async (name) =>
-      writeFileSync(join(outDir, `${prefix}-${name}.png`), (await win.webContents.capturePage()).toPNG()),
+    shot: async (name) => {
+      await sleep(350) // deja terminar la animación de entrada: si no, la captura sale a medio fundido
+      writeFileSync(join(outDir, `${prefix}-${name}.png`), (await win.webContents.capturePage()).toPNG())
+    },
     key: (k, opts = {}) =>
       run(`window.dispatchEvent(new KeyboardEvent('keydown', ${JSON.stringify({ key: k, bubbles: true, ...opts })}))`),
     /** Texto del toast más reciente; espera a que aparezca uno nuevo. */
