@@ -1,7 +1,9 @@
-import { ipcMain, BrowserWindow, dialog } from 'electron'
+import { ipcMain, BrowserWindow, app, dialog, shell } from 'electron'
+import { copyFileSync } from 'node:fs'
 import { renderTicket } from '../../shared/business/ticket.js'
 import { printTicket, saveTicketPdf } from '../ticket-print.js'
 import { writeReport, reportFileName } from '../export-excel.js'
+import { listBackups, restoreDatabase, inspectDatabaseFile, importLogo } from '../data-files.js'
 
 // Todo handler responde { ok, data } | { ok: false, error } para que el renderer reciba
 // mensajes limpios (Electron antepone texto técnico a los errores lanzados desde handle).
@@ -16,8 +18,9 @@ function handle(channel, fn) {
   })
 }
 
-export function registerIpc({ repos, appInfo, backup }) {
+export function registerIpc({ repos, appInfo, backup, data }) {
   const { settings, categories, products, sales, reports, cashCuts } = repos
+  const parentOf = (event) => BrowserWindow.fromWebContents(event.sender)
 
   // Opciones de ticket vigentes, para imprimir y para la vista previa.
   const ticketOptions = () => {
@@ -90,6 +93,61 @@ export function registerIpc({ repos, appInfo, backup }) {
 
   handle('cashCuts:preview', (args) => cashCuts.preview(args))
   handle('cashCuts:list', (limit) => cashCuts.list(limit))
+
+  // ── Datos: respaldo, restauración y logo ──
+  handle('data:info', () => ({ ...data.paths, printers: [] }))
+
+  handle('backup:list', () => listBackups(data.paths.backupDir))
+
+  handle('backup:create', () => backup('manual'))
+
+  /** Guarda una copia donde el usuario elija, para llevársela a otra computadora. */
+  handle('backup:saveAs', async (event) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(parentOf(event), {
+      title: 'Guardar copia de la base de datos',
+      defaultPath: `pos-${new Date().toLocaleDateString('en-CA')}.sqlite`,
+      filters: [{ name: 'Base de datos', extensions: ['sqlite'] }]
+    })
+    if (canceled || !filePath) return null
+    copyFileSync(backup('export'), filePath) // copia consistente, no el archivo en uso
+    return filePath
+  })
+
+  /** Solo inspecciona el archivo: la pantalla pide confirmación antes de restaurar. */
+  handle('backup:inspect', async (event) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(parentOf(event), {
+      title: 'Elegir respaldo',
+      defaultPath: data.paths.backupDir,
+      properties: ['openFile'],
+      filters: [{ name: 'Base de datos', extensions: ['sqlite', 'db'] }]
+    })
+    if (canceled || filePaths.length === 0) return null
+    return { path: filePaths[0], ...inspectDatabaseFile(filePaths[0]) }
+  })
+
+  // Restaurar y reiniciar van separados: así la restauración se puede verificar sin
+  // que el proceso se muera a media comprobación, y cada handler hace una sola cosa.
+  handle('backup:restore', (source) => data.restore(source))
+
+  handle('app:relaunch', () => {
+    app.relaunch()
+    setTimeout(() => app.exit(0), 300)
+    return true
+  })
+
+  handle('data:openFolder', () => shell.openPath(data.paths.dataDir))
+
+  handle('logo:choose', async (event) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(parentOf(event), {
+      title: 'Elegir logo para el ticket',
+      properties: ['openFile'],
+      filters: [{ name: 'Imágenes', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
+    })
+    if (canceled || filePaths.length === 0) return null
+    const logo = importLogo(filePaths[0], data.paths.dataDir)
+    settings.set({ business: { ...settings.get('business'), logo } })
+    return logo
+  })
 
   handle('cashCuts:create', (args) => {
     const cut = cashCuts.create(args)

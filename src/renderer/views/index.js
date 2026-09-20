@@ -1,22 +1,7 @@
-import { icon } from '../icons.js'
 import { renderInventory } from './inventory.js'
 import { renderSales } from './sales.js'
 import { renderReports } from './reports.js'
-
-// Vista provisional. También comprueba de punta a punta renderer → IPC → SQLite.
-async function renderPlaceholder(view, container) {
-  const [products, low] = await Promise.all([window.api.products.search({ limit: 1000 }), window.api.products.lowStock()])
-  container.innerHTML = `
-    <div class="card empty">
-      ${icon(view.icon)}
-      <h2>${view.label}</h2>
-      <p>Esta pantalla se construye en la Fase ${view.phase}.</p>
-      <div class="stats">
-        <div class="stat"><strong>${products.length}</strong>productos activos</div>
-        <div class="stat"><strong>${low.length}</strong>con stock bajo</div>
-      </div>
-    </div>`
-}
+import { renderSettings } from './settings.js'
 
 // `render(container)` puede devolver una función de limpieza (p. ej. soltar atajos de la vista).
 export const views = [
@@ -49,8 +34,7 @@ export const views = [
     label: 'Ajustes',
     icon: 'settings',
     keys: 'Ctrl+,',
-    subtitle: 'Negocio, comisiones y apariencia',
-    phase: 6,
-    render: (c) => renderPlaceholder(views[3], c)
+    subtitle: 'Negocio, comisiones, apariencia y respaldos',
+    render: renderSettings
   }
 ]

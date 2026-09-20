@@ -1,4 +1,5 @@
 import { SETTINGS_DEFAULTS } from '../../../shared/constants.js'
+import { validateSettings } from '../../../shared/business/settings-validate.js'
 
 // Cada clave de primer nivel se guarda como JSON. Lo no guardado cae a SETTINGS_DEFAULTS.
 export function createSettingsRepo(db) {
@@ -19,12 +20,13 @@ export function createSettingsRepo(db) {
     },
 
     // patch: { clave: valor, ... } — reemplaza el valor completo de cada clave.
+    // Se valida aquí, no en la pantalla: el renderer no es la autoridad.
     set(patch) {
+      const errors = validateSettings(patch)
+      if (errors.length > 0) throw new Error(errors.join('. '))
+
       db.transaction(() => {
-        for (const [key, value] of Object.entries(patch)) {
-          if (!(key in SETTINGS_DEFAULTS)) throw new Error(`Ajuste desconocido: ${key}`)
-          upsert.run(key, JSON.stringify(value))
-        }
+        for (const [key, value] of Object.entries(patch)) upsert.run(key, JSON.stringify(value))
       })()
       return this.getAll()
     }

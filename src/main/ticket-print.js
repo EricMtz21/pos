@@ -1,13 +1,30 @@
 import { BrowserWindow, app, dialog } from 'electron'
-import { writeFile, unlink } from 'node:fs/promises'
-import { join } from 'node:path'
+import { writeFile, unlink, readFile } from 'node:fs/promises'
+import { join, extname } from 'node:path'
 import { renderTicket, WIDTHS } from '../shared/business/ticket.js'
 
 const MM_PER_INCH = 25.4
 const LINE_HEIGHT_IN = 0.155 // 11px a 72dpi, con interlineado
+const LOGO_HEIGHT_IN = 0.55
+
+/**
+ * El logo se incrusta como data URI: la ventana de impresión carga un HTML temporal,
+ * y una ruta local relativa a ese archivo no resolvería.
+ */
+async function logoTag(logoPath, widthMm) {
+  if (!logoPath) return ''
+  try {
+    const data = await readFile(logoPath)
+    const type = extname(logoPath).toLowerCase() === '.png' ? 'png' : extname(logoPath).slice(1)
+    return `<img src="data:image/${type};base64,${data.toString('base64')}" style="display:block;margin:0 auto 2mm;max-width:${widthMm - 10}mm;max-height:14mm">`
+  } catch {
+    // Un logo borrado o ilegible no debe impedir imprimir el ticket.
+    return ''
+  }
+}
 
 /** El ticket es texto de ancho fijo: basta una <pre> monoespaciada del ancho del papel. */
-function ticketHtml(lines, widthMm) {
+function ticketHtml(lines, widthMm, logo = '') {
   const escaped = lines
     .join('\n')
     .replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c])
@@ -21,7 +38,7 @@ function ticketHtml(lines, widthMm) {
       font: ${((widthMm - 6) / chars) * 1.85}mm/1.35 'Consolas', 'Courier New', monospace;
       white-space: pre;
     }
-  </style></head><body><pre>${escaped}</pre></body></html>`
+  </style></head><body>${logo}<pre>${escaped}</pre></body></html>`
 }
 
 /** Ventana oculta con el ticket cargado. El llamador la destruye. */
@@ -45,7 +62,8 @@ async function renderInWindow(html) {
  * instalada (incluida una térmica) sin configurarla en la app.
  */
 export async function printTicket(sale, { business, width }) {
-  const win = await renderInWindow(ticketHtml(renderTicket(sale, { business, width }), width))
+  const logo = await logoTag(business?.logo, width)
+  const win = await renderInWindow(ticketHtml(renderTicket(sale, { business, width }), width, logo))
   try {
     const { failureReason } = await win.webContents.print({ silent: false, margins: { marginType: 'none' } })
     if (failureReason) throw new Error(failureReason)
@@ -69,13 +87,14 @@ export async function saveTicketPdf(sale, { business, width }, parent) {
   if (canceled || !filePath) return null
 
   const lines = renderTicket(sale, { business, width })
-  const win = await renderInWindow(ticketHtml(lines, width))
+  const logo = await logoTag(business?.logo, width)
+  const win = await renderInWindow(ticketHtml(lines, width, logo))
   try {
     const pdf = await win.webContents.printToPDF({
       pageSize: {
         width: width / MM_PER_INCH,
         // El papel térmico es un rollo: la altura crece con el contenido.
-        height: lines.length * LINE_HEIGHT_IN + 0.5
+        height: lines.length * LINE_HEIGHT_IN + (logo ? LOGO_HEIGHT_IN : 0) + 0.5
       },
       printBackground: true,
       margins: { marginType: 'none' }

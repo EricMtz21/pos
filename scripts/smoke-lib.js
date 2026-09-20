@@ -28,9 +28,11 @@ export async function setup({ prefix = 'smoke' } = {}) {
   const problems = []
   const run = (js) => win.webContents.executeJavaScript(js)
 
+  // `Promise.resolve(...)` admite tanto condiciones síncronas como llamadas a window.api:
+  // sin él, `Boolean(unaPromesa)` sería siempre cierto y la espera terminaría de inmediato.
   const waitFor = async (js, label, timeout = 5000) => {
     for (let waited = 0; waited < timeout; waited += 50) {
-      if (await run(`Boolean(${js})`)) return true
+      if (await run(`Promise.resolve(${js}).then(Boolean)`)) return true
       await sleep(50)
     }
     // Al agotarse, se informa qué había en pantalla: un timeout a secas no dice nada.

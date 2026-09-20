@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { openDatabase } from './db/connection.js'
 import { createRepos } from './db/repos/index.js'
 import { backupDatabase } from './db/backup.js'
+import { restoreDatabase } from './data-files.js'
 import { seedSampleData } from './db/seed.js'
 import { registerIpc } from './ipc/index.js'
 
@@ -47,14 +48,29 @@ app.whenReady().then(() => {
 
   const dataDir = app.getPath('userData')
   const backupDir = join(dataDir, 'backups')
-  db = openDatabase(join(dataDir, 'pos.sqlite'), { backupDir })
+  const dbPath = join(dataDir, 'pos.sqlite')
+  db = openDatabase(dbPath, { backupDir })
   const repos = createRepos(db)
   if (!app.isPackaged && process.env.POS_SEED === '1') seedSampleData(repos)
 
   registerIpc({
     repos,
     appInfo: { name: app.getName(), version: app.getVersion() },
-    backup: (label) => backupDatabase(db, backupDir, label)
+    backup: (label) => backupDatabase(db, backupDir, label),
+    data: {
+      paths: { dataDir, backupDir, dbPath },
+      restore: (source) =>
+        restoreDatabase({
+          source,
+          dbPath,
+          backupDir,
+          db,
+          closeDb: () => {
+            db.close()
+            db = null // evita que 'will-quit' intente cerrarla otra vez
+          }
+        })
+    }
   })
   createWindow()
 

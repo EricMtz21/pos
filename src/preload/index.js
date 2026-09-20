@@ -8,7 +8,10 @@ async function call(channel, ...args) {
 
 // Única superficie que el renderer ve de Node/Electron.
 contextBridge.exposeInMainWorld('api', {
-  app: { info: () => call('app:info') },
+  app: {
+    info: () => call('app:info'),
+    relaunch: () => call('app:relaunch')
+  },
   settings: {
     get: () => call('settings:get'),
     set: (patch) => call('settings:set', patch)
@@ -44,5 +47,17 @@ contextBridge.exposeInMainWorld('api', {
     preview: (args) => call('cashCuts:preview', args),
     create: (args) => call('cashCuts:create', args),
     list: (limit) => call('cashCuts:list', limit)
+  },
+  data: {
+    info: () => call('data:info'),
+    openFolder: () => call('data:openFolder'),
+    chooseLogo: () => call('logo:choose')
+  },
+  backup: {
+    list: () => call('backup:list'),
+    create: () => call('backup:create'),
+    saveAs: () => call('backup:saveAs'),
+    inspect: () => call('backup:inspect'),
+    restore: (source) => call('backup:restore', source)
   }
 })

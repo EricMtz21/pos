@@ -21,6 +21,7 @@ archivo local que puedes respaldar copiando y pegar.
   y exportación a Excel.
 - **Corte de caja** con arqueo: compara lo que debería haber en el cajón contra lo que
   contaste y registra la diferencia.
+- **Respaldos y restauración** de la base de datos desde la propia aplicación.
 - **Modo claro y oscuro**, con acento configurable.
 
 ## Cómo funcionan los precios
@@ -85,6 +86,19 @@ La exportación a Excel genera un libro con seis hojas: resumen, ventas por día
 métodos de pago, productos, detalle de ventas y cortes de caja. Los importes van en
 pesos con formato de moneda, listos para usar en fórmulas.
 
+## Ajustes
+
+![Ajustes](docs/ajustes.png)
+
+Los datos del negocio y el logo van al ticket. Las comisiones de tarjeta se configuran
+por tramos: defines desde qué volumen acumulado baja el porcentaje, y el editor avisa
+si los tramos no son coherentes. Nada se guarda sin validarse: el proceso principal
+revisa la configuración aunque la pantalla la deje pasar.
+
+Desde aquí también puedes respaldar la base, guardar una copia para llevártela a otra
+computadora o restaurar desde un respaldo. Antes de restaurar se comprueba que el
+archivo sea una base de este sistema y se respalda la actual, por si te arrepientes.
+
 ## Instalación para desarrollo
 
 Requiere **Node.js 22.12 o superior**.
@@ -116,6 +130,7 @@ POS_SEED=1 npm run dev
 | `npm run smoke` | Prueba de interfaz: maneja el inventario en la app real |
 | `npm run smoke:sales` | Prueba de interfaz: flujo completo de venta |
 | `npm run smoke:reports` | Prueba de interfaz: reportes, corte de caja y exportación |
+| `npm run smoke:settings` | Prueba de interfaz: ajustes, respaldo y restauración |
 
 ## Dónde viven los datos
 
@@ -144,6 +159,7 @@ src/
 ├─ main/            Proceso principal (Node)
 │  ├─ db/           Conexión, migraciones, respaldos y repositorios
 │  ├─ ipc/          Puente con la interfaz
+│  ├─ data-files.js  Respaldos, restauración y logo
 │  ├─ export-excel.js
 │  └─ ticket-print.js
 ├─ preload/         API segura expuesta a la interfaz
@@ -153,7 +169,7 @@ src/
 │  ├─ styles/       Temas y componentes
 │  └─ icons/        Iconos locales
 └─ shared/
-   └─ business/     Cálculo de totales, comisiones y ticket (funciones puras)
+   └─ business/     Totales, comisiones, ticket y validación (funciones puras)
 ```
 
 Los cálculos de dinero viven en `shared/business` como funciones puras, para que la
@@ -163,10 +179,10 @@ proceso principal siempre recalcula al guardar: nunca confía en lo que le manda
 ## Estado
 
 Funcionando: ventas, inventario, comisiones de tarjeta, ticket e impresión, reportes
-con exportación a Excel y corte de caja.
+con exportación a Excel, corte de caja, ajustes y respaldos.
 
-En camino: pantalla de ajustes, cancelaciones y devoluciones, roles de usuario y
-actualizaciones automáticas.
+En camino: cancelaciones y devoluciones, roles de usuario, personalización de atajos
+y actualizaciones automáticas.
 
 ## Tecnologías
 
