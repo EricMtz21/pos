@@ -30,13 +30,26 @@ export function kbd(combo) {
   return `<span class="kbd-group">${keys.map((k) => `<kbd>${k}</kbd>`).join('')}</span>`
 }
 
+const isEditable = (el) =>
+  el instanceof HTMLElement &&
+  (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
+
+// Un combo sin modificador ni tecla de función (ej. '+', 'Supr') es texto que el usuario
+// puede estar escribiendo: no se dispara mientras el foco está en un campo.
+const isTypingKey = (combo) => !combo.includes('+') && !/^F\d+$/.test(combo)
+
 export function initShortcuts() {
   window.addEventListener(
     'keydown',
     (e) => {
+      // Con un modal abierto manda el modal: Esc lo cierra de forma nativa.
+      if (document.querySelector('dialog[open]')) return
+
       const combo = comboFromEvent(e)
       const list = combo && bindings.get(combo)
       if (!list?.length) return
+      if (isEditable(e.target) && isTypingKey(combo)) return
+
       e.preventDefault()
       // El último registrado (la vista activa) tiene prioridad sobre los globales.
       list.at(-1).handler(e)

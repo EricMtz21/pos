@@ -2,10 +2,13 @@ import './styles/index.css'
 import { hydrateIcons, icon } from './icons.js'
 import { initTheme, toggleTheme, currentTheme } from './theme.js'
 import { initShortcuts, register, kbd } from './shortcuts/index.js'
-import { views, renderPlaceholder } from './views/index.js'
+import { views } from './views/index.js'
+import { showHelp } from './views/help.js'
 import { toast } from './components/toast.js'
 
 const $ = (sel) => document.querySelector(sel)
+
+let disposeView = null
 
 function renderNav() {
   $('#nav').innerHTML = views
@@ -23,12 +26,16 @@ function renderNav() {
 
 async function navigate(id) {
   const view = views.find((v) => v.id === id)
+  disposeView?.()
+  disposeView = null
+
   document.querySelectorAll('.nav-item[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === id))
   $('#view-title').textContent = view.label
   $('#view-subtitle').textContent = view.subtitle
   try {
-    await renderPlaceholder(view, $('#view'))
+    disposeView = await view.render($('#view'))
   } catch (err) {
+    console.error(err)
     toast(err.message, 'error')
   }
 }
@@ -49,10 +56,11 @@ async function start() {
   $('#version').textContent = `Versión ${info.version}`
 
   initShortcuts()
+  register('F1', showHelp, 'Ayuda: lista de atajos')
   register('Ctrl+D', toggleTheme, 'Alternar modo claro/oscuro')
   for (const v of views) register(v.keys, () => navigate(v.id), `Ir a ${v.label}`)
 
-  navigate('sales')
+  await navigate('inventory')
 }
 
 start().catch((err) => {

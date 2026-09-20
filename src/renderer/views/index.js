@@ -1,15 +1,8 @@
 import { icon } from '../icons.js'
-
-// Vistas del sidebar. Cada fase reemplaza el `render` de su vista por la pantalla real.
-export const views = [
-  { id: 'sales', label: 'Ventas', icon: 'shopping-cart', keys: 'F2', subtitle: 'Cobro rápido con escáner y teclado', phase: 4 },
-  { id: 'inventory', label: 'Inventario', icon: 'package', keys: 'Ctrl+I', subtitle: 'Productos, stock y alertas', phase: 3 },
-  { id: 'reports', label: 'Reportes', icon: 'chart-column', keys: 'Ctrl+R', subtitle: 'Ventas, comisiones y corte de caja', phase: 5 },
-  { id: 'settings', label: 'Ajustes', icon: 'settings', keys: 'Ctrl+,', subtitle: 'Negocio, comisiones y apariencia', phase: 6 }
-]
+import { renderInventory } from './inventory.js'
 
 // Vista provisional. También comprueba de punta a punta renderer → IPC → SQLite.
-export async function renderPlaceholder(view, container) {
+async function renderPlaceholder(view, container) {
   const [products, low] = await Promise.all([window.api.products.search({ limit: 1000 }), window.api.products.lowStock()])
   container.innerHTML = `
     <div class="card empty">
@@ -22,3 +15,42 @@ export async function renderPlaceholder(view, container) {
       </div>
     </div>`
 }
+
+// `render(container)` puede devolver una función de limpieza (p. ej. soltar atajos de la vista).
+export const views = [
+  {
+    id: 'sales',
+    label: 'Ventas',
+    icon: 'shopping-cart',
+    keys: 'F2',
+    subtitle: 'Cobro rápido con escáner y teclado',
+    phase: 4,
+    render: (c) => renderPlaceholder(views[0], c)
+  },
+  {
+    id: 'inventory',
+    label: 'Inventario',
+    icon: 'package',
+    keys: 'Ctrl+I',
+    subtitle: 'Productos, stock y alertas',
+    render: renderInventory
+  },
+  {
+    id: 'reports',
+    label: 'Reportes',
+    icon: 'chart-column',
+    keys: 'Ctrl+R',
+    subtitle: 'Ventas, comisiones y corte de caja',
+    phase: 5,
+    render: (c) => renderPlaceholder(views[2], c)
+  },
+  {
+    id: 'settings',
+    label: 'Ajustes',
+    icon: 'settings',
+    keys: 'Ctrl+,',
+    subtitle: 'Negocio, comisiones y apariencia',
+    phase: 6,
+    render: (c) => renderPlaceholder(views[3], c)
+  }
+]
