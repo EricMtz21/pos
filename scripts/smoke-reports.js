@@ -104,15 +104,30 @@ electron.app.whenReady().then(async () => {
   await shot('corte')
 
   await run(`document.querySelector('[form="cut-form"]').click()`)
-  await waitFor(`document.querySelectorAll('#r-cuts tr').length >= 1 && !document.querySelector('#cut-form')`, 'el corte queda registrado')
+  // Se espera el aviso de la pantalla, que es la señal real de que el corte se guardó.
+  // «hay al menos una fila» no servía: la tabla vacía ya trae su fila de «sin cortes».
+  // Margen amplio: registrar el corte dispara un respaldo de la base (VACUUM INTO), y
+  // escribir en una carpeta sincronizada con OneDrive puede tardar varios segundos.
+  await waitFor(
+    `/Corte registrado/.test([...document.querySelectorAll('.toast')].at(-1)?.textContent ?? '')`,
+    'el corte queda registrado',
+    15000
+  )
+  await waitFor(`!document.querySelector('#cut-form')`, 'el modal del corte se cierra')
 
   const corte = await run(`window.api.cashCuts.list(1).then(c => c[0])`)
   check(corte.expected_cash === 57600, `esperado guardado: ${corte.expected_cash}`)
   check(corte.counted_cash === 57000, `contado guardado: ${corte.counted_cash}`)
   check(corte.difference === -600, `diferencia guardada: ${corte.difference}`)
 
-  // §6: el corte debe dejar un respaldo automático de la base.
-  const backups = readdirSync(join(dataDir, 'backups'))
+  // §6: el corte debe dejar un respaldo automático de la base. Ocurre justo después de
+  // responder, no antes, así que se espera a que el archivo aparezca.
+  let backups = []
+  for (let esperado = 0; esperado < 15000; esperado += 100) {
+    backups = readdirSync(join(dataDir, 'backups'))
+    if (backups.some((f) => /corte\.sqlite$/.test(f))) break
+    await new Promise((r) => setTimeout(r, 100))
+  }
   check(backups.length > backupsAntes, 'el corte no generó respaldo de la base')
   check(backups.some((f) => /corte\.sqlite$/.test(f)), `respaldos: ${backups.join(', ')}`)
 

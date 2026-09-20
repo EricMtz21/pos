@@ -10,6 +10,7 @@ import { migrations } from '../src/main/db/migrations/index.js'
 import { backupDatabase } from '../src/main/db/backup.js'
 import { createRepos } from '../src/main/db/repos/index.js'
 import { seedSampleData } from '../src/main/db/seed.js'
+import { SETTINGS_DEFAULTS } from '../src/shared/constants.js'
 
 const tmp = () => mkdtempSync(join(tmpdir(), 'pos-test-'))
 
@@ -94,7 +95,7 @@ test('ajustes: defaults, persistencia y claves desconocidas', () => {
   settings.set({ theme: 'dark', lowStockThreshold: 10 })
   assert.equal(settings.get('theme'), 'dark')
   assert.equal(settings.get('lowStockThreshold'), 10)
-  assert.equal(settings.get('accent'), '#C7F04A')
+  assert.equal(settings.get('accent'), SETTINGS_DEFAULTS.accent, 'lo no guardado cae al valor por defecto')
   assert.throws(() => settings.set({ inventada: 1 }), /desconocido/)
 })
 

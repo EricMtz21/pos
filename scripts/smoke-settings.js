@@ -39,6 +39,31 @@ electron.app.whenReady().then(async () => {
   check(/XAXX010101000/.test(ticket), 'el ticket no toma el RFC')
   check(/Gracias por su preferencia/.test(ticket), 'el ticket no toma el mensaje al pie')
 
+  // ── Vista previa del ticket: refleja lo recién guardado ──
+  await waitFor(
+    `document.querySelector('#s-ticket-preview')?.textContent.includes('ABARROTES LA ESQUINA')`,
+    'la vista previa toma el nombre del negocio'
+  )
+  const previa58 = await run(`document.querySelector('#s-ticket-preview').textContent`)
+  check(/TOTAL/.test(previa58) && /Gracias por su preferencia/.test(previa58), 'la vista previa no muestra el ticket completo')
+  check(
+    Math.max(...previa58.split('\n').map((l) => l.length)) <= 32,
+    'la vista previa de 58 mm excede los 32 caracteres'
+  )
+
+  // Cambiar el ancho debe repintarla.
+  await run(`(() => { const f = document.querySelector('#s-ticket'); f.width.value = '80'
+    f.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await waitFor(
+    `document.querySelector('#s-ticket-preview').textContent.split(String.fromCharCode(10)).some((l) => l.length > 32)`,
+    'la vista previa sigue el ancho de 80 mm'
+  )
+  const previa80 = await run(`document.querySelector('#s-ticket-preview').textContent`)
+  check(
+    Math.max(...previa80.split('\n').map((l) => l.length)) <= 48,
+    'la vista previa de 80 mm excede los 48 caracteres'
+  )
+
   // ── Umbral de stock: cambia lo que marca el inventario ──
   const stockBajoAntes = await run(`window.api.products.lowStock().then(p => p.length)`)
   await run(`(() => { const f = document.querySelector('#s-inventory')
@@ -48,9 +73,9 @@ electron.app.whenReady().then(async () => {
   check(stockBajoDespues > stockBajoAntes, `el umbral no tuvo efecto (${stockBajoAntes} → ${stockBajoDespues})`)
 
   // ── Apariencia: el acento se aplica en vivo y persiste ──
-  await run(`document.querySelector('[data-accent="#38BDF8"]').click()`)
-  await waitFor(`getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() === '#38BDF8'`, 'el acento se aplica en vivo')
-  check((await run(`window.api.settings.get().then(s => s.accent)`)) === '#38BDF8', 'el acento no se guardó')
+  await run(`document.querySelector('[data-accent="#14B8A6"]').click()`)
+  await waitFor(`getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() === '#14B8A6'`, 'el acento se aplica en vivo')
+  check((await run(`window.api.settings.get().then(s => s.accent)`)) === '#14B8A6', 'el acento no se guardó')
 
   // ── Editor de tramos ──
   // Arranca con los dos tramos por defecto (4 % y 3 % a partir del umbral).

@@ -9,7 +9,7 @@ import { createCommissionEditor } from './commission-editor.js'
 const escape = (s) =>
   String(s ?? '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c])
 
-const ACCENTS = ['#C7F04A', '#4ADE80', '#38BDF8', '#A78BFA', '#FB7185', '#FBBF24']
+const ACCENTS = ['#3B82F6', '#0EA5E9', '#14B8A6', '#8B5CF6', '#F43F5E', '#F59E0B']
 
 const formatSize = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
@@ -68,6 +68,13 @@ export async function renderSettings(container) {
             <label class="switch"><input type="checkbox" name="autoPrint" ${settings.ticket.autoPrint ? 'checked' : ''} />
               <span>Abrir el diálogo de impresión automáticamente</span></label></div>
         </form>
+
+        <div class="field" style="margin-top:18px">
+          <span>Vista previa</span>
+          <div class="ticket-paper ticket-preview"><pre id="s-ticket-preview"></pre></div>
+          <span class="hint">Datos de ejemplo. Refleja el nombre, RFC y mensaje del negocio, y el
+            ancho elegido. El logo no aparece aquí: solo se ve al imprimir o guardar en PDF.</span>
+        </div>
       </section>
 
       <section class="panel">
@@ -160,6 +167,15 @@ export async function renderSettings(container) {
    * campo, así que sin esta comparación una pasada por el formulario escribiría —y
    * avisaría— una vez por campo aunque no se tocara nada.
    */
+  async function paintTicketPreview() {
+    try {
+      // textContent: el ticket es texto plano, nunca HTML.
+      $('#s-ticket-preview').textContent = (await window.api.ticket.previewSample()).join('\n')
+    } catch (err) {
+      $('#s-ticket-preview').textContent = `No se pudo generar la vista previa: ${err.message}`
+    }
+  }
+
   async function save(patch) {
     const changed = Object.fromEntries(
       Object.entries(patch).filter(([key, value]) => JSON.stringify(settings[key]) !== JSON.stringify(value))
@@ -170,6 +186,8 @@ export async function renderSettings(container) {
       const saved = await window.api.settings.set(changed)
       Object.assign(settings, saved)
       toast('Ajustes guardados')
+      // El negocio y el ancho salen en el ticket: la vista previa debe seguirlos.
+      if ('business' in changed || 'ticket' in changed) await paintTicketPreview()
       return saved
     } catch (err) {
       toast(err.message, 'error')
@@ -201,6 +219,8 @@ export async function renderSettings(container) {
   }))
 
   autosave($('#s-inventory'), (f) => ({ lowStockThreshold: Number(f.lowStockThreshold.value) }))
+
+  await paintTicketPreview()
 
   // ── Apariencia: se aplica en vivo y se guarda ──
   $('#s-appearance').addEventListener('change', async (e) => {

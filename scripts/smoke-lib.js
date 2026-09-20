@@ -52,7 +52,31 @@ export async function setup({ prefix = 'smoke' } = {}) {
     check: (cond, msg) => !cond && problems.push(msg),
     shot: async (name) => {
       await sleep(350) // deja terminar la animación de entrada: si no, la captura sale a medio fundido
-      writeFileSync(join(outDir, `${prefix}-${name}.png`), (await win.webContents.capturePage()).toPNG())
+      // capturePage saca al <dialog> de la «top layer» y le quita `open` SIN emitir el
+      // evento `close`: la promesa del modal se queda colgada y el diálogo huérfano en el
+      // DOM. Solo pasa al capturar (un usuario real nunca lo hace), así que se reabre aquí.
+      // Se marca el diálogo concreto: buscar «uno cualquiera sin open» resucitaba huérfanos
+      // viejos y los apilaba sobre el actual.
+      await run(`(() => { const d = document.querySelector('dialog[open]'); if (d) d.dataset.capturando = '1' })()`)
+
+      // Una captura es diagnóstico, no una aserción: si falla no debe tumbar la prueba.
+      // Tras un location.reload() el compositor puede no estar listo y devuelve
+      // UnknownVizError; se reintenta una vez y, si no, se avisa y se sigue.
+      for (let intento = 1; intento <= 2; intento++) {
+        try {
+          writeFileSync(join(outDir, `${prefix}-${name}.png`), (await win.webContents.capturePage()).toPNG())
+          break
+        } catch (err) {
+          if (intento === 2) console.warn(`  (aviso) no se pudo capturar «${name}»: ${err.message}`)
+          else await sleep(600)
+        }
+      }
+      await run(`(() => {
+        const d = document.querySelector('dialog[data-capturando]')
+        if (!d) return
+        delete d.dataset.capturando
+        if (!d.open && d.isConnected) d.showModal()
+      })()`)
     },
     key: (k, opts = {}) =>
       run(`window.dispatchEvent(new KeyboardEvent('keydown', ${JSON.stringify({ key: k, bubbles: true, ...opts })}))`),
