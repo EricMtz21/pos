@@ -2,8 +2,9 @@ node_modules/
 out/
 dist/
 release/
+
+# Datos locales de desarrollo (base de datos y respaldos)
 .dev-data/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
-.claude/
