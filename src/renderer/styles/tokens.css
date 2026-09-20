@@ -1,0 +1,42 @@
+@font-face {
+  font-family: 'Inter';
+  src: url('../fonts/inter-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --accent: #c7f04a;
+  --accent-contrast: #12160b;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font: 'Inter', system-ui, sans-serif;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --sidebar-w: 248px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --surface-2: #eff1ed;
+  --text: #14161a;
+  --text-muted: #5c6169;
+  --border: rgba(20, 22, 26, 0.08);
+  --sidebar-bg: rgba(255, 255, 255, 0.55);
+  --shadow: 0 1px 2px rgba(20, 22, 26, 0.05), 0 8px 24px rgba(20, 22, 26, 0.06);
+  --glow: rgba(160, 205, 40, 0.28);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0e0f0d;
+  --surface: #17191a;
+  --surface-2: #1e2022;
+  --text: #f2f4f0;
+  --text-muted: #a0a4a0;
+  --border: rgba(255, 255, 255, 0.08);
+  --sidebar-bg: rgba(20, 22, 20, 0.45);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --glow: rgba(199, 240, 74, 0.16);
+}
