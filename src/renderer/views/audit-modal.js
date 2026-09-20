@@ -79,7 +79,7 @@ export async function showProductHistory(product) {
     ...movimientos.map((m) => ({
       at: m.created_at,
       tipo: 'Inventario',
-      detalle: `${m.qty > 0 ? '+' : ''}${m.qty} ${escape(product.unit)}${m.reason ? ` · ${escape(m.reason)}` : ''}`
+      detalle: `${m.qty > 0 ? '+' : ''}${m.qty}${m.reason ? ` · ${escape(m.reason)}` : ''}`
     }))
   ].sort((a, b) => b.at.localeCompare(a.at))
 

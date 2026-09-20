@@ -1,7 +1,6 @@
 import { openModal } from '../components/modal.js'
 import { formatMoney, parseMoney, netFromGross, margin } from '../../shared/money.js'
 
-const UNITS = ['pza', 'kg', 'lt', 'caja', 'paquete', 'metro']
 const TAX_RATES = [
   { value: 0.16, label: 'IVA 16 %' },
   { value: 0.08, label: 'IVA 8 % (frontera)' },
@@ -15,9 +14,9 @@ const option = (value, label, selected) =>
  * Alta y edición de producto. `product` null = alta.
  * Devuelve el producto guardado, o null si se canceló.
  */
-export function openProductForm({ product, categories, lowStockThreshold }) {
+export function openProductForm({ product, lowStockThreshold }) {
   const editing = Boolean(product)
-  const p = product ?? { tax_rate: 0.16, unit: 'pza', stock: 0, active: 1 }
+  const p = product ?? { tax_rate: 0.16, stock: 0, active: 1 }
   const money = (c) => (c ? (c / 100).toFixed(2) : '')
 
   return openModal({
@@ -33,19 +32,6 @@ export function openProductForm({ product, categories, lowStockThreshold }) {
         <label class="field full">
           <span>Nombre *</span>
           <input name="name" value="${(p.name ?? '').replace(/"/g, '&quot;')}" autocomplete="off" required />
-        </label>
-
-        <label class="field">
-          <span>Categoría</span>
-          <select name="category_id">
-            <option value="">Sin categoría</option>
-            ${categories.map((c) => option(c.id, c.name, p.category_id)).join('')}
-          </select>
-        </label>
-
-        <label class="field">
-          <span>Unidad</span>
-          <select name="unit">${UNITS.map((u) => option(u, u, p.unit)).join('')}</select>
         </label>
 
         <label class="field">
@@ -121,8 +107,6 @@ export function openProductForm({ product, categories, lowStockThreshold }) {
         close({
           code: form.code.value,
           name: form.name.value,
-          category_id: form.category_id.value ? Number(form.category_id.value) : null,
-          unit: form.unit.value,
           price_gross: gross,
           price_net: netFromGross(gross, taxRate),
           cost,
@@ -143,7 +127,7 @@ export function openStockForm(product) {
     title: `Ajustar stock · ${product.name}`,
     body: `
       <form id="stock-form" class="form-grid">
-        <p class="hint full">Stock actual: <strong>${product.stock} ${product.unit}</strong></p>
+        <p class="hint full">Stock actual: <strong>${product.stock}</strong></p>
         <label class="field">
           <span>Movimiento</span>
           <select name="type">

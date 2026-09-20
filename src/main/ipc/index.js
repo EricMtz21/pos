@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow, app, dialog, shell } from 'electron'
 import { copyFileSync } from 'node:fs'
-import { renderTicket } from '../../shared/business/ticket.js'
+import { renderTicket, sampleSale } from '../../shared/business/ticket.js'
 import { printTicket, saveTicketPdf } from '../ticket-print.js'
 import { writeReport, reportFileName } from '../export-excel.js'
 import { listBackups, restoreDatabase, inspectDatabaseFile, importLogo } from '../data-files.js'
@@ -11,7 +11,7 @@ import { can, deniedForCashier } from '../../shared/business/permissions.js'
 let session = null
 
 export function registerIpc({ repos, appInfo, backup, data, updater }) {
-  const { settings, categories, products, sales, returns, reports, cashCuts, users } = repos
+  const { settings, products, sales, returns, reports, cashCuts, users } = repos
   const parentOf = (event) => BrowserWindow.fromWebContents(event.sender)
 
   // Sin usuarios dados de alta no hay sesión ni restricciones (ver permissions.js).
@@ -96,8 +96,6 @@ export function registerIpc({ repos, appInfo, backup, data, updater }) {
   handle('settings:get', () => settings.getAll())
   handle('settings:set', (patch) => settings.set(patch))
 
-  handle('categories:list', () => categories.list())
-
   handle('products:search', (filters) => products.search(filters))
   handle('products:findByCode', (code) => products.findByCode(code))
   handle('products:create', (data) => products.create(data, { userId: currentUserId() }))
@@ -126,6 +124,9 @@ export function registerIpc({ repos, appInfo, backup, data, updater }) {
     if (!sale) throw new Error('Venta no encontrada')
     return renderTicket(sale, ticketOptions())
   })
+
+  /** Vista previa con datos de ejemplo, para ver el formato desde Ajustes. */
+  handle('ticket:previewSample', () => renderTicket(sampleSale(), ticketOptions()))
 
   handle('ticket:print', (saleId) => {
     const sale = sales.get(saleId)
@@ -229,13 +230,20 @@ export function registerIpc({ repos, appInfo, backup, data, updater }) {
 
   handle('cashCuts:create', (args) => {
     const cut = cashCuts.create({ ...args, userId: currentUserId() })
-    // §6: respaldo automático de la base en cada corte de caja.
-    try {
-      backup?.('corte')
-    } catch (err) {
-      // El corte ya quedó registrado; un respaldo fallido no debe deshacerlo.
-      console.error('[ipc] respaldo tras el corte falló:', err)
-    }
+
+    // §6: respaldo automático de la base en cada corte. Va DESPUÉS de responder:
+    // `VACUUM INTO` es síncrono y en una carpeta lenta (unidad de red, carpeta
+    // sincronizada, antivirus) tardaba segundos, dejando la pantalla del corte
+    // colgada aunque el corte ya estuviera guardado.
+    setImmediate(() => {
+      try {
+        backup?.('corte')
+      } catch (err) {
+        // El corte ya quedó registrado; un respaldo fallido no debe deshacerlo.
+        console.error('[ipc] respaldo tras el corte falló:', err)
+      }
+    })
+
     return cut
   })
 }

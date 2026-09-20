@@ -70,7 +70,7 @@ export async function renderSales(container) {
           return `<tr class="cart-row" data-i="${i}" aria-selected="${i === selected}">
             <td>
               ${escape(line.name)}
-              ${excede ? `<div class="stock-warn">Supera el stock (${line.stock} ${escape(line.unit)})</div>` : ''}
+              ${excede ? `<div class="stock-warn">Supera el stock (${line.stock})</div>` : ''}
             </td>
             <td class="num muted">${formatMoney(line.unitPrice)}</td>
             <td class="num">
@@ -106,7 +106,6 @@ export async function renderSales(container) {
       cart.push({
         productId: product.id,
         name: product.name,
-        unit: product.unit,
         qty,
         unitPrice: product.price_gross,
         taxRate: product.tax_rate,
@@ -161,7 +160,7 @@ export async function renderSales(container) {
       .map(
         (p, i) => `<button class="result" type="button" role="option" data-i="${i}" aria-selected="${i === highlighted}">
           <span class="name">${escape(p.name)}</span>
-          <span class="muted">${p.stock} ${escape(p.unit)}</span>
+          <span class="muted">${p.stock}</span>
           <span class="price">${formatMoney(p.price_gross)}</span>
         </button>`
       )

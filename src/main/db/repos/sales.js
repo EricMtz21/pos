@@ -52,7 +52,7 @@ export function createSalesRepo(db, { settings, products, audit }) {
         const product = products.get(item.productId)
         if (!product) throw new Error(`Producto no encontrado: ${item.productId}`)
         if (!(item.qty > 0)) throw new Error(`Cantidad inválida para ${product.name}`)
-        return { ...item, name: product.name, taxRate: product.tax_rate, unit: product.unit }
+        return { ...item, name: product.name, taxRate: product.tax_rate }
       })
 
       const totals = calculateTotals(resolved, { discount })

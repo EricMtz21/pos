@@ -14,12 +14,11 @@ function rowHtml(p) {
   return `<tr data-id="${p.id}">
     <td class="muted">${escape(p.code) || '—'}</td>
     <td>${escape(p.name)}</td>
-    <td class="muted">${escape(p.category) || '—'}</td>
     <td class="num">${formatMoney(p.price_gross)}</td>
     <td class="num muted">${formatMoney(p.price_net)}</td>
     <td class="num muted">${m === null ? '—' : `${m.toFixed(0)} %`}</td>
     <td class="num">
-      ${p.low_stock ? `<span class="badge warn">${icon('triangle-alert')}${p.stock} ${escape(p.unit)}</span>` : `${p.stock} ${escape(p.unit)}`}
+      ${p.low_stock ? `<span class="badge warn">${icon('triangle-alert')}${p.stock}</span>` : p.stock}
     </td>
     <td>
       <div class="row-actions">
@@ -37,8 +36,8 @@ function rowHtml(p) {
 }
 
 export async function renderInventory(container) {
-  const [categories, settings] = await Promise.all([window.api.categories.list(), window.api.settings.get()])
-  const filters = { text: '', categoryId: null, lowStockOnly: false }
+  const settings = await window.api.settings.get()
+  const filters = { text: '', lowStockOnly: false }
 
   container.innerHTML = `
     <div class="toolbar">
@@ -46,10 +45,6 @@ export async function renderInventory(container) {
         ${icon('search')}
         <input id="inv-search" type="search" placeholder="Buscar por nombre o código…" autocomplete="off" aria-label="Buscar productos" />
       </div>
-      <select id="inv-category" aria-label="Categoría" style="width:auto">
-        <option value="">Todas las categorías</option>
-        ${categories.map((c) => `<option value="${c.id}">${escape(c.name)}</option>`).join('')}
-      </select>
       <button class="btn" id="inv-low" type="button">${icon('triangle-alert')}Stock bajo</button>
       ${
         allowed('products:create')
@@ -61,7 +56,7 @@ export async function renderInventory(container) {
       <table>
         <thead>
           <tr>
-            <th>Código</th><th>Producto</th><th>Categoría</th>
+            <th>Código</th><th>Producto</th>
             <th class="num">Precio</th><th class="num">Sin IVA</th><th class="num">Margen</th>
             <th class="num">Stock</th><th></th>
           </tr>
@@ -79,13 +74,13 @@ export async function renderInventory(container) {
     const products = await window.api.products.search(filters)
     tbody.innerHTML = products.length
       ? products.map(rowHtml).join('')
-      : `<tr><td colspan="8" class="muted" style="padding:32px;text-align:center">
+      : `<tr><td colspan="7" class="muted" style="padding:32px;text-align:center">
            Sin productos que coincidan.</td></tr>`
     hydrateIcons(tbody)
   }
 
   async function create() {
-    const data = await openProductForm({ product: null, categories, lowStockThreshold: settings.lowStockThreshold })
+    const data = await openProductForm({ product: null, lowStockThreshold: settings.lowStockThreshold })
     if (!data) return
     try {
       const saved = await window.api.products.create(data)
@@ -97,7 +92,7 @@ export async function renderInventory(container) {
   }
 
   async function edit(product) {
-    const data = await openProductForm({ product, categories, lowStockThreshold: settings.lowStockThreshold })
+    const data = await openProductForm({ product, lowStockThreshold: settings.lowStockThreshold })
     if (!data) return
     try {
       await window.api.products.update(product.id, data)
@@ -113,7 +108,7 @@ export async function renderInventory(container) {
     if (!move) return
     try {
       const after = await window.api.products.adjustStock({ productId: product.id, ...move })
-      toast(`Stock de ${after.name}: ${after.stock} ${after.unit}`)
+      toast(`Stock de ${after.name}: ${after.stock}`)
       await refresh()
     } catch (err) {
       toast(err.message, 'error')
@@ -143,11 +138,6 @@ export async function renderInventory(container) {
     clearTimeout(timer)
     filters.text = search.value
     timer = setTimeout(refresh, 120)
-  })
-
-  container.querySelector('#inv-category').addEventListener('change', (e) => {
-    filters.categoryId = e.target.value ? Number(e.target.value) : null
-    refresh()
   })
 
   lowBtn.addEventListener('click', () => {

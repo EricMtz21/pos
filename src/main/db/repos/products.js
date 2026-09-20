@@ -1,11 +1,12 @@
 import { MOVE_TYPES } from '../../../shared/constants.js'
 
-const FIELDS = ['code', 'name', 'price_gross', 'price_net', 'cost', 'stock', 'min_stock', 'unit', 'category_id', 'tax_rate', 'active']
+// Este negocio no usa categorías ni unidades: las columnas siguen en el esquema con su
+// valor por defecto, pero ya no se escriben ni se leen.
+const FIELDS = ['code', 'name', 'price_gross', 'price_net', 'cost', 'stock', 'min_stock', 'tax_rate', 'active']
 
 const SELECT = `
-  SELECT p.*, c.name AS category,
-         (p.stock <= COALESCE(p.min_stock, @threshold)) AS low_stock
-  FROM products p LEFT JOIN categories c ON c.id = p.category_id`
+  SELECT p.*, (p.stock <= COALESCE(p.min_stock, @threshold)) AS low_stock
+  FROM products p`
 
 function validate(data, { partial }) {
   const isInt = (v) => Number.isInteger(v) && v >= 0
@@ -49,20 +50,18 @@ export function createProductsRepo(db, { settings, audit }) {
       )
     },
 
-    search({ text = '', categoryId = null, lowStockOnly = false, includeInactive = false, limit = 200 } = {}) {
+    search({ text = '', lowStockOnly = false, includeInactive = false, limit = 200 } = {}) {
       const like = `%${text.trim()}%`
       return db
         .prepare(
           `${SELECT}
            WHERE (@includeInactive = 1 OR p.active = 1)
              AND (p.name LIKE @like OR p.code LIKE @like)
-             AND (@categoryId IS NULL OR p.category_id = @categoryId)
              AND (@lowStockOnly = 0 OR p.stock <= COALESCE(p.min_stock, @threshold))
            ORDER BY p.name LIMIT @limit`
         )
         .all({
           like,
-          categoryId,
           lowStockOnly: lowStockOnly ? 1 : 0,
           includeInactive: includeInactive ? 1 : 0,
           threshold: threshold(),

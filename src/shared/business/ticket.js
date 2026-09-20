@@ -95,3 +95,30 @@ export function renderTicket(sale, { business = {}, width = 58 } = {}) {
 }
 
 export const ticketToText = (...args) => renderTicket(...args).join('\n')
+
+/**
+ * Venta ficticia representativa, para la vista previa de Ajustes: así se puede ver
+ * cómo queda el ticket sin tener que cobrar algo de verdad. Lleva un artículo con
+ * varias piezas, uno exento, descuento y cambio, que es donde más se nota el formato.
+ */
+export function sampleSale() {
+  const ahora = new Date()
+  const p = (n) => String(n).padStart(2, '0')
+  return {
+    folio: `V${ahora.getFullYear()}${p(ahora.getMonth() + 1)}${p(ahora.getDate())}-0001`,
+    created_at: `${ahora.getFullYear()}-${p(ahora.getMonth() + 1)}-${p(ahora.getDate())} ${p(ahora.getHours())}:${p(ahora.getMinutes())}:00`,
+    status: 'completed',
+    subtotal: 6400,
+    discount: 200,
+    tax: 497,
+    total: 6200,
+    cash_received: 10000,
+    change_amount: 3800,
+    card_commission_amount: 0,
+    items: [
+      { name_snapshot: 'Refresco cola 600ml', qty: 2, unit_price: 1800, discount: 0, line_total: 3600 },
+      { name_snapshot: 'Arroz 1kg', qty: 1, unit_price: 2800, discount: 0, line_total: 2800 }
+    ],
+    payments: [{ method: 'cash', amount: 6200 }]
+  }
+}

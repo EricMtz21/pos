@@ -32,7 +32,6 @@ contextBridge.exposeInMainWorld('api', {
     get: () => call('settings:get'),
     set: (patch) => call('settings:set', patch)
   },
-  categories: { list: () => call('categories:list') },
   products: {
     search: (filters) => call('products:search', filters),
     findByCode: (code) => call('products:findByCode', code),
@@ -54,6 +53,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   ticket: {
     preview: (saleId) => call('ticket:preview', saleId),
+    previewSample: () => call('ticket:previewSample'),
     print: (saleId) => call('ticket:print', saleId),
     savePdf: (saleId) => call('ticket:savePdf', saleId)
   },
