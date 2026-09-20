@@ -10,7 +10,7 @@ import { can, deniedForCashier } from '../../shared/business/permissions.js'
 // y es aquí donde se comprueban los permisos antes de ejecutar nada.
 let session = null
 
-export function registerIpc({ repos, appInfo, backup, data }) {
+export function registerIpc({ repos, appInfo, backup, data, updater }) {
   const { settings, categories, products, sales, returns, reports, cashCuts, users } = repos
   const parentOf = (event) => BrowserWindow.fromWebContents(event.sender)
 
@@ -200,6 +200,12 @@ export function registerIpc({ repos, appInfo, backup, data }) {
   // Restaurar y reiniciar van separados: así la restauración se puede verificar sin
   // que el proceso se muera a media comprobación, y cada handler hace una sola cosa.
   handle('backup:restore', (source) => data.restore(source))
+
+  // Buscar actualizaciones no cambia datos ni configuración: cualquiera puede hacerlo.
+  handle('updates:state', () => updater.state, { open: true })
+  handle('updates:check', () => updater.check(), { open: true })
+  handle('updates:download', () => updater.download(), { open: true })
+  handle('updates:install', () => updater.install())
 
   handle('app:relaunch', () => {
     app.relaunch()

@@ -17,7 +17,8 @@
     "smoke:sales": "electron scripts/smoke-sales.js",
     "smoke:reports": "electron scripts/smoke-reports.js",
     "smoke:settings": "electron scripts/smoke-settings.js",
-    "smoke:extras": "electron scripts/smoke-extras.js"
+    "smoke:extras": "electron scripts/smoke-extras.js",
+    "dist": "electron-vite build && electron-builder --win --publish never"
   },
   "devDependencies": {
     "electron": "^44.4.3",
@@ -27,6 +28,8 @@
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
+    "electron-updater": "^6.8.9",
     "exceljs": "^4.4.0"
-  }
+  },
+  "author": "EricMtz21"
 }

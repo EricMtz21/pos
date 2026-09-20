@@ -8,3 +8,4 @@ release/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+release/

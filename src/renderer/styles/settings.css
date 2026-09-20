@@ -191,6 +191,23 @@ table.tiers input {
   display: none;
 }
 
+/* ── Progreso de descarga ────────────────────────────────── */
+.update-progress {
+  height: 6px;
+  margin-top: 10px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.update-progress > div {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width 0.25s var(--ease);
+}
+
 /* ── Acerca de ───────────────────────────────────────────── */
 .about {
   display: grid;

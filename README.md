@@ -25,6 +25,7 @@ archivo local que puedes respaldar copiando y pegar.
 - **Usuarios con PIN y roles** (administrador y cajero), opcionales.
 - **Historial** de cambios de precio y movimientos de inventario.
 - **Respaldos y restauración** de la base de datos, con respaldo automático diario.
+- **Actualizaciones** desde la propia aplicación, sin perder datos.
 - **Modo claro y oscuro**, con acento configurable.
 
 ## Cómo funcionan los precios
@@ -131,7 +132,17 @@ Al crear el primero se empieza a pedir PIN al arrancar.
 Los permisos se comprueban en el proceso principal, no solo en la pantalla: ocultar un botón
 no es una medida de seguridad.
 
-## Instalación para desarrollo
+## Instalación
+
+Descarga el instalador o la versión portable desde
+[Releases](https://github.com/EricMtz21/pos/releases). La portable no instala nada:
+se ejecuta directamente.
+
+Desde **Ajustes → Actualizaciones** puedes buscar versiones nuevas. Eso sí necesita
+internet; vender no. Actualizar nunca borra tu información, porque la base de datos
+vive fuera de la aplicación.
+
+## Compilar desde el código
 
 Requiere **Node.js 22.12 o superior**.
 
@@ -158,6 +169,7 @@ POS_SEED=1 npm run dev
 |---|---|
 | `npm run dev` | Arranca la app con recarga en caliente |
 | `npm run build` | Compila a `out/` |
+| `npm run dist` | Genera el instalador y la versión portable en `release/` |
 | `npm test` | Pruebas de la lógica de negocio y la capa de datos |
 | `npm run smoke` | Prueba de interfaz: maneja el inventario en la app real |
 | `npm run smoke:sales` | Prueba de interfaz: flujo completo de venta |
@@ -215,7 +227,7 @@ Funcionando: ventas, inventario, comisiones de tarjeta, ticket e impresión, rep
 con exportación a Excel, corte de caja, ajustes, respaldos, devoluciones,
 cancelaciones, historial y roles de usuario.
 
-En camino: personalización de atajos y actualizaciones automáticas.
+En camino: personalización de atajos.
 
 ## Tecnologías
 

@@ -12,6 +12,22 @@ contextBridge.exposeInMainWorld('api', {
     info: () => call('app:info'),
     relaunch: () => call('app:relaunch')
   },
+  updates: {
+    state: () => call('updates:state'),
+    check: () => call('updates:check'),
+    download: () => call('updates:download'),
+    install: () => call('updates:install'),
+    /**
+     * Avisos que llegan del proceso principal (progreso de descarga, etc.).
+     * Se pasa solo el dato, nunca el objeto `event` de Electron: expondría `sender`
+     * y con él una vía para mandar mensajes internos desde la página.
+     */
+    onState: (callback) => {
+      const listener = (_event, state) => callback(state)
+      ipcRenderer.on('updates:state', listener)
+      return () => ipcRenderer.off('updates:state', listener)
+    }
+  },
   settings: {
     get: () => call('settings:get'),
     set: (patch) => call('settings:set', patch)

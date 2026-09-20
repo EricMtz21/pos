@@ -1,0 +1,75 @@
+appId: com.ericmtz.posoffline
+productName: POS Offline
+copyright: Copyright © ${author}
+
+directories:
+  output: release
+  buildResources: resources
+
+# Solo lo compilado y lo imprescindible. El resto del repo (fuentes, pruebas,
+# scripts) no tiene por qué viajar dentro del instalador.
+files:
+  - out/**
+  - package.json
+  # exceljs trae 21 MB de bundles para navegador que en Node nunca se cargan.
+  - '!node_modules/exceljs/dist/**'
+  # Solo se excluyen extensiones que nunca se cargan en tiempo de ejecución.
+  # OJO: no excluir carpetas por nombre (doc, docs, examples…). Se intentó y rompió
+  # la aplicación empaquetada: `exceljs/lib/doc/` es código fuente, no documentación,
+  # y sin él la app moría al arrancar, antes incluso de poder mostrar el error.
+  - '!node_modules/**/*.{md,map,ts,flow}'
+  - '!node_modules/**/{LICENSE,license,AUTHORS,CHANGELOG}*'
+
+asar: true
+compression: maximum
+
+# El binario nativo de SQLite no se puede cargar desde dentro del asar: hay que
+# dejarlo como archivo suelto o la aplicación no abre la base de datos.
+asarUnpack:
+  - '**/node_modules/better-sqlite3/**'
+
+# Quita los idiomas de Chromium que no se usan (§10).
+afterPack: scripts/after-pack.cjs
+
+# better-sqlite3 trae binarios precompilados N-API: sirven igual en Node y en
+# Electron, así que no hace falta recompilarlo al empaquetar.
+npmRebuild: false
+
+# §9: el botón «Buscar actualizaciones» consulta las releases de este repositorio.
+# Al ser público no hace falta token.
+publish:
+  provider: github
+  owner: EricMtz21
+  repo: pos
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  # better-sqlite3 trae binarios de las 8 plataformas (~17 MB). En un build de
+  # Windows solo sirve uno; los demás se quedan fuera.
+  files:
+    - '!node_modules/better-sqlite3/prebuilds/{darwin,linux,linuxmusl}-*.node'
+    - '!node_modules/better-sqlite3/prebuilds/win32-arm64.node'
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: POS Offline
+  # Desinstalar NO debe llevarse la base de datos: vive en userData.
+  deleteAppDataOnUninstall: false
+
+portable:
+  artifactName: POS-Offline-${version}-portable.exe
+
+mac:
+  target: [dmg]
+  category: public.app-category.business
+
+linux:
+  target: [AppImage]
+  category: Office

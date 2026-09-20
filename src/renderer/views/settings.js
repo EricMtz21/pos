@@ -135,10 +135,18 @@ export async function renderSettings(container) {
       </section>
 
       <section class="panel">
-        <h3>${icon('info')}Acerca de</h3>
+        <h3>${icon('refresh-cw')}Actualizaciones</h3>
+        <p class="hint">Buscar actualizaciones necesita internet. Vender no: el punto de venta
+          funciona igual sin conexión, y actualizar nunca borra tu información.</p>
         <div class="about">
-          <div><span class="muted">Versión</span><strong>${escape(info.version)}</strong></div>
-          <div><span class="muted">Actualizaciones</span><span>Llegarán en una versión futura.</span></div>
+          <div><span class="muted">Versión instalada</span><strong>${escape(info.version)}</strong></div>
+        </div>
+        <p id="u-message" class="hint" style="margin-top:10px"></p>
+        <div class="update-progress" id="u-progress" hidden><div id="u-bar"></div></div>
+        <div class="button-row" style="margin-top:12px">
+          <button class="btn primary" type="button" id="u-check">${icon('refresh-cw')}Buscar actualizaciones</button>
+          <button class="btn" type="button" id="u-download" hidden>${icon('download')}Descargar</button>
+          <button class="btn primary" type="button" id="u-install" hidden>${icon('check')}Reiniciar e instalar</button>
         </div>
       </section>
     </div>`
@@ -382,6 +390,39 @@ export async function renderSettings(container) {
     await window.api.auth.logout()
     location.reload() // vuelve a arrancar y pide PIN
   })
+
+  // ── Actualizaciones ──
+  function paintUpdate(state) {
+    $('#u-message').textContent = state.message ?? ''
+    $('#u-check').disabled = ['checking', 'downloading'].includes(state.status)
+    $('#u-download').hidden = state.status !== 'available'
+    $('#u-install').hidden = state.status !== 'ready'
+
+    const bajando = state.status === 'downloading'
+    $('#u-progress').hidden = !bajando
+    if (bajando) $('#u-bar').style.width = `${state.percent}%`
+  }
+  paintUpdate(await window.api.updates.state())
+
+  // El progreso llega por evento desde el proceso principal.
+  const unsubscribe = window.api.updates.onState(paintUpdate)
+
+  $('#u-check').addEventListener('click', async () => {
+    paintUpdate(await window.api.updates.check())
+  })
+  $('#u-download').addEventListener('click', async () => {
+    paintUpdate(await window.api.updates.download())
+  })
+  $('#u-install').addEventListener('click', async () => {
+    try {
+      await window.api.updates.install()
+    } catch (err) {
+      toast(err.message, 'error')
+    }
+  })
+
+  // Al salir de Ajustes se suelta el listener: si no, se apilaría uno por visita.
+  return () => unsubscribe()
 }
 
 /** Alta o edición de usuario. `user` null = alta. Devuelve los datos o null. */
