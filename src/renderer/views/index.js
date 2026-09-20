@@ -1,5 +1,6 @@
 import { icon } from '../icons.js'
 import { renderInventory } from './inventory.js'
+import { renderSales } from './sales.js'
 
 // Vista provisional. También comprueba de punta a punta renderer → IPC → SQLite.
 async function renderPlaceholder(view, container) {
@@ -24,8 +25,7 @@ export const views = [
     icon: 'shopping-cart',
     keys: 'F2',
     subtitle: 'Cobro rápido con escáner y teclado',
-    phase: 4,
-    render: (c) => renderPlaceholder(views[0], c)
+    render: renderSales
   },
   {
     id: 'inventory',

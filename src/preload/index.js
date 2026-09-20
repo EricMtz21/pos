@@ -22,5 +22,18 @@ contextBridge.exposeInMainWorld('api', {
     deactivate: (id) => call('products:deactivate', id),
     lowStock: () => call('products:lowStock'),
     adjustStock: (args) => call('products:adjustStock', args)
+  },
+  sales: {
+    create: (payload) => call('sales:create', payload),
+    get: (id) => call('sales:get', id),
+    last: () => call('sales:last'),
+    list: (filters) => call('sales:list', filters),
+    cancel: (id, options) => call('sales:cancel', id, options),
+    previewCommission: (args) => call('sales:previewCommission', args)
+  },
+  ticket: {
+    preview: (saleId) => call('ticket:preview', saleId),
+    print: (saleId) => call('ticket:print', saleId),
+    savePdf: (saleId) => call('ticket:savePdf', saleId)
   }
 })

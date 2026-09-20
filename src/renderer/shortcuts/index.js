@@ -36,7 +36,8 @@ const isEditable = (el) =>
 
 // Un combo sin modificador ni tecla de función (ej. '+', 'Supr') es texto que el usuario
 // puede estar escribiendo: no se dispara mientras el foco está en un campo.
-const isTypingKey = (combo) => !combo.includes('+') && !/^F\d+$/.test(combo)
+// Ojo: se comprueba el PREFIJO, no `includes('+')` — el combo de la tecla '+' es «+».
+const isTypingKey = (combo) => !/^(Ctrl|Alt|Shift)\+/.test(combo) && !/^F\d+$/.test(combo)
 
 export function initShortcuts() {
   window.addEventListener(

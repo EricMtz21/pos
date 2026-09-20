@@ -1,0 +1,333 @@
+/* ── Pantalla de venta ───────────────────────────────────── */
+.sale {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 20px;
+  height: 100%;
+  min-height: 0;
+}
+
+.sale-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+/* Caja del escáner: el elemento más prominente de la pantalla. */
+.scanner {
+  position: relative;
+}
+
+.scanner input {
+  padding: 16px 16px 16px 50px;
+  font-size: 17px;
+  background: var(--surface);
+  border-width: 2px;
+}
+
+.scanner .icon {
+  left: 18px;
+  width: 1.4em;
+  height: 1.4em;
+}
+
+/* Resultados de búsqueda en vivo, sobre el carrito. */
+.results {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+
+.results:empty {
+  display: none;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.result:last-child {
+  border-bottom: none;
+}
+
+.result[aria-selected='true'] {
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.result .name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result .price {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Carrito ─────────────────────────────────────────────── */
+.cart-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.cart-row[aria-selected='true'] td {
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.cart-row td:first-child {
+  width: 100%;
+}
+
+.qty-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.qty-control .btn {
+  padding: 4px;
+}
+
+.qty-control .qty {
+  min-width: 48px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.stock-warn {
+  color: #b7791f;
+  font-size: 12px;
+}
+
+:root[data-theme='dark'] .stock-warn {
+  color: #e8c26a;
+}
+
+/* ── Panel de totales ────────────────────────────────────── */
+.totals {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  align-self: start;
+  position: sticky;
+  top: 0;
+}
+
+.totals-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.totals-row.grand {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-size: 15px;
+}
+
+.totals-row.grand strong {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.totals .btn.primary {
+  justify-content: center;
+  padding: 15px;
+  font-size: 16px;
+}
+
+.totals .btn.ghost {
+  justify-content: center;
+}
+
+/* ── Cobro ───────────────────────────────────────────────── */
+.pay-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pay-total strong {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.method {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  transition: border-color 0.15s var(--ease);
+}
+
+.method .icon {
+  width: 1.5em;
+  height: 1.5em;
+  color: var(--text-muted);
+}
+
+.method[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.method[aria-pressed='true'] .icon {
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .method[aria-pressed='true'] .icon {
+  color: #6f9a12;
+}
+
+.quick-cash {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.change-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.change-box strong {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.change-box.short strong {
+  color: #ef5b5b;
+}
+
+/* Desglose de comisión: informativo para el negocio, nunca para el cliente. */
+.commission {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.commission .row {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+}
+
+.commission .row.net {
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.mixed-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.mixed-row {
+  display: grid;
+  grid-template-columns: 1fr 130px;
+  gap: 8px;
+  align-items: center;
+}
+
+.remaining {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  margin-top: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.remaining.ok {
+  color: var(--text);
+}
+
+.remaining:not(.ok) strong {
+  color: #ef5b5b;
+}
+
+/* ── Ticket ──────────────────────────────────────────────── */
+.ticket-paper {
+  padding: 18px;
+  background: #fff;
+  color: #000;
+  border-radius: var(--radius-sm);
+  overflow: auto;
+}
+
+.ticket-paper pre {
+  margin: 0;
+  font: 12px/1.45 'Consolas', 'Courier New', monospace;
+  white-space: pre;
+}
