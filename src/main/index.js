@@ -4,6 +4,7 @@ import { openDatabase } from './db/connection.js'
 import { createRepos } from './db/repos/index.js'
 import { backupDatabase } from './db/backup.js'
 import { restoreDatabase } from './data-files.js'
+import { autoBackup } from './auto-backup.js'
 import { seedSampleData } from './db/seed.js'
 import { registerIpc } from './ipc/index.js'
 
@@ -52,6 +53,14 @@ app.whenReady().then(() => {
   db = openDatabase(dbPath, { backupDir })
   const repos = createRepos(db)
   if (!app.isPackaged && process.env.POS_SEED === '1') seedSampleData(repos)
+
+  // §5.5: respaldo automático al arrancar, como mucho uno al día.
+  try {
+    autoBackup({ backupDir, backup: (label) => backupDatabase(db, backupDir, label) })
+  } catch (err) {
+    // Que falle el respaldo no debe impedir abrir la caja.
+    console.error('[backup] respaldo automático falló:', err)
+  }
 
   registerIpc({
     repos,

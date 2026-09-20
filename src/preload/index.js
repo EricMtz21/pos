@@ -24,7 +24,9 @@ contextBridge.exposeInMainWorld('api', {
     update: (id, data) => call('products:update', id, data),
     deactivate: (id) => call('products:deactivate', id),
     lowStock: () => call('products:lowStock'),
-    adjustStock: (args) => call('products:adjustStock', args)
+    adjustStock: (args) => call('products:adjustStock', args),
+    moves: (id, limit) => call('products:moves', id, limit),
+    history: (id) => call('products:history', id)
   },
   sales: {
     create: (payload) => call('sales:create', payload),
@@ -53,6 +55,24 @@ contextBridge.exposeInMainWorld('api', {
     openFolder: () => call('data:openFolder'),
     chooseLogo: () => call('logo:choose')
   },
+  auth: {
+    state: () => call('auth:state'),
+    users: () => call('auth:users'),
+    login: (id, pin) => call('auth:login', id, pin),
+    logout: () => call('auth:logout')
+  },
+  users: {
+    list: () => call('users:list'),
+    create: (args) => call('users:create', args),
+    update: (id, args) => call('users:update', id, args),
+    deactivate: (id) => call('users:deactivate', id)
+  },
+  returns: {
+    items: (saleId) => call('returns:items', saleId),
+    create: (args) => call('returns:create', args),
+    list: (range) => call('returns:list', range)
+  },
+  audit: { list: (filters) => call('audit:list', filters) },
   backup: {
     list: () => call('backup:list'),
     create: () => call('backup:create'),

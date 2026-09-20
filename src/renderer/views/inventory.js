@@ -3,6 +3,8 @@ import { register, kbd } from '../shortcuts/index.js'
 import { toast } from '../components/toast.js'
 import { confirmModal } from '../components/modal.js'
 import { openProductForm, openStockForm } from './product-form.js'
+import { showProductHistory } from './audit-modal.js'
+import { allowed } from '../session.js'
 import { formatMoney, margin } from '../../shared/money.js'
 
 const escape = (s) => String(s ?? '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c])
@@ -21,9 +23,14 @@ function rowHtml(p) {
     </td>
     <td>
       <div class="row-actions">
-        <button class="btn ghost icon-only" data-act="stock" title="Ajustar stock">${icon('package')}</button>
-        <button class="btn ghost icon-only" data-act="edit" title="Editar">${icon('pencil')}</button>
-        <button class="btn ghost icon-only danger" data-act="remove" title="Desactivar">${icon('trash-2')}</button>
+        <button class="btn ghost icon-only" data-act="history" title="Historial">${icon('info')}</button>
+        ${
+          allowed('products:update')
+            ? `<button class="btn ghost icon-only" data-act="stock" title="Ajustar stock">${icon('package')}</button>
+               <button class="btn ghost icon-only" data-act="edit" title="Editar">${icon('pencil')}</button>
+               <button class="btn ghost icon-only danger" data-act="remove" title="Desactivar">${icon('trash-2')}</button>`
+            : ''
+        }
       </div>
     </td>
   </tr>`
@@ -44,7 +51,11 @@ export async function renderInventory(container) {
         ${categories.map((c) => `<option value="${c.id}">${escape(c.name)}</option>`).join('')}
       </select>
       <button class="btn" id="inv-low" type="button">${icon('triangle-alert')}Stock bajo</button>
-      <button class="btn primary" id="inv-new" type="button">${icon('plus')}Nuevo producto ${kbd('Ctrl+N')}</button>
+      ${
+        allowed('products:create')
+          ? `<button class="btn primary" id="inv-new" type="button">${icon('plus')}Nuevo producto ${kbd('Ctrl+N')}</button>`
+          : ''
+      }
     </div>
     <div class="table-wrap">
       <table>
@@ -145,7 +156,7 @@ export async function renderInventory(container) {
     refresh()
   })
 
-  container.querySelector('#inv-new').addEventListener('click', create)
+  container.querySelector('#inv-new')?.addEventListener('click', create)
 
   tbody.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-act]')
@@ -153,15 +164,15 @@ export async function renderInventory(container) {
     const id = Number(btn.closest('tr').dataset.id)
     const product = (await window.api.products.search({ ...filters, limit: 1000 })).find((p) => p.id === id)
     if (!product) return
-    ;({ stock: adjust, edit, remove }[btn.dataset.act])(product)
+    ;({ stock: adjust, edit, remove, history: showProductHistory }[btn.dataset.act])(product)
   })
 
   await refresh()
 
   // Atajos de esta vista; se sueltan al salir de ella.
   const disposers = [
-    register('Ctrl+N', create, 'Nuevo producto'),
-    register('F3', () => search.select(), 'Buscar producto')
+    register('F3', () => search.select(), 'Buscar producto'),
+    ...(allowed('products:create') ? [register('Ctrl+N', create, 'Nuevo producto')] : [])
   ]
   return () => disposers.forEach((off) => off())
 }

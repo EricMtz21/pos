@@ -5,14 +5,19 @@ import { initShortcuts, register, kbd } from './shortcuts/index.js'
 import { views } from './views/index.js'
 import { showHelp } from './views/help.js'
 import { showTicket } from './views/ticket-modal.js'
+import { ensureSession } from './views/login.js'
+import { allowed, currentUserName } from './session.js'
 import { toast } from './components/toast.js'
 
 const $ = (sel) => document.querySelector(sel)
 
 let disposeView = null
 
+// Un cajero no entra a Ajustes: todo lo que hay ahí le está vetado.
+const visibleViews = () => views.filter((v) => !v.requires || allowed(v.requires))
+
 function renderNav() {
-  $('#nav').innerHTML = views
+  $('#nav').innerHTML = visibleViews()
     .map(
       (v) => `<button class="nav-item" type="button" data-view="${v.id}">
         ${icon(v.icon)}<span class="nav-label">${v.label}</span>${kbd(v.keys)}
@@ -58,6 +63,9 @@ function renderThemeToggle() {
 }
 
 async function start() {
+  // Antes que nada, quién está usando la caja: de eso depende qué se muestra.
+  await ensureSession()
+
   const [settings, info] = await Promise.all([window.api.settings.get(), window.api.app.info()])
   initTheme(settings.theme, settings.accent)
   hydrateIcons()
@@ -65,13 +73,14 @@ async function start() {
   renderThemeToggle()
   window.addEventListener('themechange', renderThemeToggle)
   $('#theme-toggle').addEventListener('click', toggleTheme)
-  $('#version').textContent = `Versión ${info.version}`
+  const quién = currentUserName()
+  $('#version').textContent = quién ? `${quién} · v${info.version}` : `Versión ${info.version}`
 
   initShortcuts()
   register('F1', showHelp, 'Ayuda: lista de atajos')
   register('Ctrl+D', toggleTheme, 'Alternar modo claro/oscuro')
   register('Ctrl+P', reprintLast, 'Reimprimir último ticket')
-  for (const v of views) register(v.keys, () => navigate(v.id), `Ir a ${v.label}`)
+  for (const v of visibleViews()) register(v.keys, () => navigate(v.id), `Ir a ${v.label}`)
 
   // Vender es lo primero que hace el cajero al abrir la app.
   await navigate('sales')

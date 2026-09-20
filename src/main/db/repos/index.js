@@ -5,6 +5,8 @@ import { createProductsRepo } from './products.js'
 import { createSalesRepo } from './sales.js'
 import { createReportsRepo } from './reports.js'
 import { createCashCutsRepo } from './cash-cuts.js'
+import { createReturnsRepo } from './returns.js'
+import { createUsersRepo } from './users.js'
 
 export function createRepos(db) {
   const audit = createAuditRepo(db)
@@ -12,7 +14,9 @@ export function createRepos(db) {
   const categories = createCategoriesRepo(db)
   const products = createProductsRepo(db, { settings, audit })
   const sales = createSalesRepo(db, { settings, products, audit })
-  const reports = createReportsRepo(db)
+  const returns = createReturnsRepo(db, { audit })
+  const reports = createReportsRepo(db, { returns })
   const cashCuts = createCashCutsRepo(db, { audit })
-  return { audit, settings, categories, products, sales, reports, cashCuts }
+  const users = createUsersRepo(db, { audit })
+  return { audit, settings, categories, products, sales, returns, reports, cashCuts, users }
 }

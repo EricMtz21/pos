@@ -35,6 +35,7 @@ export const views = [
     icon: 'settings',
     keys: 'Ctrl+,',
     subtitle: 'Negocio, comisiones, apariencia y respaldos',
+    requires: 'settings:set', // el cajero no entra aquí
     render: renderSettings
   }
 ]

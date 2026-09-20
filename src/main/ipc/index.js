@@ -4,23 +4,86 @@ import { renderTicket } from '../../shared/business/ticket.js'
 import { printTicket, saveTicketPdf } from '../ticket-print.js'
 import { writeReport, reportFileName } from '../export-excel.js'
 import { listBackups, restoreDatabase, inspectDatabaseFile, importLogo } from '../data-files.js'
+import { can, deniedForCashier } from '../../shared/business/permissions.js'
 
-// Todo handler responde { ok, data } | { ok: false, error } para que el renderer reciba
-// mensajes limpios (Electron antepone texto técnico a los errores lanzados desde handle).
-function handle(channel, fn) {
-  ipcMain.handle(channel, async (event, ...args) => {
-    try {
-      return { ok: true, data: await fn(...args, event) }
-    } catch (err) {
-      console.error(`[ipc] ${channel}:`, err)
-      return { ok: false, error: err.message }
-    }
-  })
-}
+// Sesión actual. Vive en el proceso principal: el renderer no puede alterarla,
+// y es aquí donde se comprueban los permisos antes de ejecutar nada.
+let session = null
 
 export function registerIpc({ repos, appInfo, backup, data }) {
-  const { settings, categories, products, sales, reports, cashCuts } = repos
+  const { settings, categories, products, sales, returns, reports, cashCuts, users } = repos
   const parentOf = (event) => BrowserWindow.fromWebContents(event.sender)
+
+  // Sin usuarios dados de alta no hay sesión ni restricciones (ver permissions.js).
+  const currentRole = () => (users.isAuthRequired() ? (session?.role ?? 'nobody') : null)
+  const currentUserId = () => session?.id ?? null
+
+  /**
+   * Todo handler responde { ok, data } | { ok: false, error } para que el renderer reciba
+   * mensajes limpios (Electron antepone texto técnico a los errores lanzados desde handle).
+   * Antes de ejecutar comprueba el permiso del canal: la interfaz esconde los botones,
+   * pero quien decide es esto.
+   */
+  function handle(channel, fn, { open = false } = {}) {
+    ipcMain.handle(channel, async (event, ...args) => {
+      try {
+        if (!open && !can(currentRole(), channel)) {
+          throw new Error('Tu usuario no tiene permiso para esta acción')
+        }
+        return { ok: true, data: await fn(...args, event) }
+      } catch (err) {
+        console.error(`[ipc] ${channel}:`, err)
+        return { ok: false, error: err.message }
+      }
+    })
+  }
+
+  // ── Sesión ──
+  const sessionState = () => ({
+    required: users.isAuthRequired(),
+    user: session,
+    role: currentRole(),
+    denied: deniedForCashier()
+  })
+
+  handle('auth:state', () => sessionState(), { open: true })
+  handle('auth:users', () => users.list(), { open: true })
+
+  handle(
+    'auth:login',
+    (id, pin) => {
+      const user = users.authenticate(id, pin)
+      if (!user) throw new Error('PIN incorrecto')
+      session = user
+      repos.audit.log({ entity: 'user', entityId: user.id, action: 'login', userId: user.id })
+      return sessionState()
+    },
+    { open: true }
+  )
+
+  handle(
+    'auth:logout',
+    () => {
+      session = null
+      return sessionState()
+    },
+    { open: true }
+  )
+
+  handle('users:list', () => users.list({ includeInactive: true }))
+
+  handle('users:create', (args) => {
+    const eraElPrimero = !users.isAuthRequired()
+    const created = users.create({ ...args, userId: currentUserId() })
+    // Al crear el primer usuario la app empieza a exigir sesión. Quien lo acaba de dar
+    // de alta está frente al teclado: se le abre sesión para que no quede fuera a
+    // media configuración, sin poder siquiera crear al cajero.
+    if (eraElPrimero) session = created
+    return created
+  })
+
+  handle('users:update', (id, args) => users.update(id, args, { userId: currentUserId() }))
+  handle('users:deactivate', (id) => users.deactivate(id, { userId: currentUserId() }))
 
   // Opciones de ticket vigentes, para imprimir y para la vista previa.
   const ticketOptions = () => {
@@ -37,18 +100,26 @@ export function registerIpc({ repos, appInfo, backup, data }) {
 
   handle('products:search', (filters) => products.search(filters))
   handle('products:findByCode', (code) => products.findByCode(code))
-  handle('products:create', (data) => products.create(data))
-  handle('products:update', (id, data) => products.update(id, data))
-  handle('products:deactivate', (id) => products.deactivate(id))
+  handle('products:create', (data) => products.create(data, { userId: currentUserId() }))
+  handle('products:update', (id, data) => products.update(id, data, { userId: currentUserId() }))
+  handle('products:deactivate', (id) => products.deactivate(id, { userId: currentUserId() }))
   handle('products:lowStock', () => products.lowStock())
-  handle('products:adjustStock', (args) => products.adjustStock(args))
+  handle('products:adjustStock', (args) => products.adjustStock({ ...args, userId: currentUserId() }))
+  handle('products:moves', (id, limit) => products.moves(id, limit))
+  handle('products:history', (id) => repos.audit.list({ entity: 'product', entityId: id, limit: 50 }))
 
-  handle('sales:create', (payload) => sales.create(payload))
+  handle('sales:create', (payload) => sales.create({ ...payload, userId: currentUserId() }))
   handle('sales:get', (id) => sales.get(id))
   handle('sales:last', () => sales.last())
   handle('sales:list', (filters) => sales.list(filters))
-  handle('sales:cancel', (id, options) => sales.cancel(id, options))
+  handle('sales:cancel', (id, options) => sales.cancel(id, { ...options, userId: currentUserId() }))
   handle('sales:previewCommission', (args) => sales.previewCommission(args))
+
+  handle('returns:items', (saleId) => returns.returnableItems(saleId))
+  handle('returns:create', (args) => returns.create({ ...args, userId: currentUserId() }))
+  handle('returns:list', (range) => returns.list(range))
+
+  handle('audit:list', (filters) => repos.audit.list(filters))
 
   handle('ticket:preview', (saleId) => {
     const sale = sales.get(saleId)
@@ -76,7 +147,8 @@ export function registerIpc({ repos, appInfo, backup, data }) {
     byMethod: reports.byMethod(range),
     topProducts: reports.topProducts(range),
     sales: reports.sales(range),
-    cuts: cashCuts.list()
+    cuts: cashCuts.list(),
+    returns: returns.list(range)
   })
 
   handle('reports:get', (range) => reportData(range))
@@ -150,7 +222,7 @@ export function registerIpc({ repos, appInfo, backup, data }) {
   })
 
   handle('cashCuts:create', (args) => {
-    const cut = cashCuts.create(args)
+    const cut = cashCuts.create({ ...args, userId: currentUserId() })
     // §6: respaldo automático de la base en cada corte de caja.
     try {
       backup?.('corte')

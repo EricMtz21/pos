@@ -39,7 +39,7 @@ test('migración 002: agrega la comisión por pago y reparte la ya registrada', 
   `)
 
   migrate(db, migrations)
-  assert.equal(getSchemaVersion(db), 2)
+  assert.equal(getSchemaVersion(db), migrations.at(-1).version)
 
   const pagos = db.prepare('SELECT method, amount, commission_amount FROM payments ORDER BY id').all()
   assert.equal(pagos.find((p) => p.method === 'cash').commission_amount, 0, 'el efectivo no paga comisión')

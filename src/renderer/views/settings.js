@@ -1,8 +1,9 @@
 import { icon, hydrateIcons } from '../icons.js'
 import { kbd, listShortcuts } from '../shortcuts/index.js'
 import { toast } from '../components/toast.js'
-import { confirmModal } from '../components/modal.js'
+import { confirmModal, openModal } from '../components/modal.js'
 import { applyAccent, initTheme } from '../theme.js'
+import { session } from '../session.js'
 import { createCommissionEditor } from './commission-editor.js'
 
 const escape = (s) =>
@@ -116,6 +117,20 @@ export async function renderSettings(container) {
         <div class="table-wrap" style="margin-top:14px;max-height:220px">
           <table><thead><tr><th>Respaldo</th><th class="num">Tamaño</th></tr></thead>
           <tbody id="s-backups"></tbody></table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>${icon('keyboard')}Usuarios y roles</h3>
+        <p class="hint">Mientras no haya usuarios, la aplicación abre sin PIN y permite todo.
+          Al crear el primero, se pedirá PIN al arrancar.</p>
+        <div class="table-wrap" style="max-height:220px">
+          <table><thead><tr><th>Nombre</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="s-users"></tbody></table>
+        </div>
+        <div class="button-row" style="margin-top:12px">
+          <button class="btn primary" type="button" id="s-user-new">${icon('plus')}Nuevo usuario</button>
+          <button class="btn" type="button" id="s-logout">Cerrar sesión</button>
         </div>
       </section>
 
@@ -295,6 +310,114 @@ export async function renderSettings(container) {
       await window.api.app.relaunch()
     } catch (err) {
       toast(err.message, 'error')
+    }
+  })
+
+  // ── Usuarios ──
+  async function paintUsers() {
+    const list = await window.api.users.list()
+    const actual = session().user
+    $('#s-users').innerHTML = list.length
+      ? list
+          .map(
+            (u) => `<tr data-user="${u.id}" class="${u.active ? '' : 'cancelled'}">
+              <td>${escape(u.name)}${u.id === actual?.id ? ' <span class="badge">tú</span>' : ''}</td>
+              <td class="muted">${u.role === 'admin' ? 'Administrador' : 'Cajero'}</td>
+              <td class="muted">${u.active ? 'Activo' : 'Inactivo'}</td>
+              <td><div class="row-actions">
+                <button class="btn ghost icon-only" data-act="edit" aria-label="Editar">${icon('pencil')}</button>
+                ${u.active ? `<button class="btn ghost icon-only danger" data-act="off" aria-label="Desactivar">${icon('trash-2')}</button>` : ''}
+              </div></td>
+            </tr>`
+          )
+          .join('')
+      : '<tr><td colspan="4" class="muted" style="padding:20px;text-align:center">Sin usuarios: la aplicación abre sin PIN.</td></tr>'
+    hydrateIcons($('#s-users'))
+    $('#s-logout').disabled = !actual
+  }
+  await paintUsers()
+
+  $('#s-user-new').addEventListener('click', async () => {
+    const datos = await openUserForm(null)
+    if (!datos) return
+    try {
+      await window.api.users.create(datos)
+      await paintUsers()
+      toast(`Usuario creado: ${datos.name}`)
+    } catch (err) {
+      toast(err.message, 'error')
+    }
+  })
+
+  $('#s-users').addEventListener('click', async (e) => {
+    const act = e.target.closest('[data-act]')?.dataset.act
+    if (!act) return
+    const id = Number(e.target.closest('[data-user]').dataset.user)
+    const user = (await window.api.users.list()).find((u) => u.id === id)
+
+    try {
+      if (act === 'edit') {
+        const datos = await openUserForm(user)
+        if (!datos) return
+        await window.api.users.update(id, datos)
+        toast('Usuario actualizado')
+      } else {
+        const ok = await confirmModal({
+          title: 'Desactivar usuario',
+          message: `«${user.name}» dejará de poder entrar. Sus ventas y movimientos se conservan.`,
+          confirmLabel: 'Desactivar',
+          danger: true
+        })
+        if (!ok) return
+        await window.api.users.deactivate(id)
+        toast('Usuario desactivado')
+      }
+      await paintUsers()
+    } catch (err) {
+      toast(err.message, 'error')
+    }
+  })
+
+  $('#s-logout').addEventListener('click', async () => {
+    await window.api.auth.logout()
+    location.reload() // vuelve a arrancar y pide PIN
+  })
+}
+
+/** Alta o edición de usuario. `user` null = alta. Devuelve los datos o null. */
+function openUserForm(user) {
+  const editing = Boolean(user)
+  return openModal({
+    title: editing ? `Editar · ${user.name}` : 'Nuevo usuario',
+    body: `
+      <form id="user-form" class="form-grid">
+        <label class="field full"><span>Nombre *</span>
+          <input name="name" value="${escape(user?.name ?? '')}" autocomplete="off" required /></label>
+        <label class="field"><span>Rol</span>
+          <select name="role">
+            <option value="cashier"${user?.role === 'cashier' ? ' selected' : ''}>Cajero</option>
+            <option value="admin"${user?.role === 'admin' ? ' selected' : ''}>Administrador</option>
+          </select>
+          <span class="hint">El cajero vende y hace cortes, pero no cambia precios ni ajustes.</span></label>
+        <label class="field"><span>PIN ${editing ? '(dejar vacío para no cambiarlo)' : '*'}</span>
+          <input name="pin" inputmode="numeric" autocomplete="off" placeholder="4 a 8 dígitos" /></label>
+      </form>`,
+    footer: `<button class="btn" type="button" data-close>Cancelar</button>
+             <button class="btn primary" type="submit" form="user-form">Guardar</button>`,
+    onMount: ({ dialog, close }) => {
+      const form = dialog.querySelector('#user-form')
+      form.addEventListener('submit', (e) => {
+        e.preventDefault()
+        const pin = form.pin.value.trim()
+        if (!editing && !/^\d{4,8}$/.test(pin)) return form.pin.setAttribute('aria-invalid', 'true')
+        if (editing && pin && !/^\d{4,8}$/.test(pin)) return form.pin.setAttribute('aria-invalid', 'true')
+        close({
+          name: form.name.value.trim(),
+          role: form.role.value,
+          ...(pin ? { pin } : {})
+        })
+      })
+      form.name.focus()
     }
   })
 }

@@ -2,7 +2,11 @@ import { icon, hydrateIcons } from '../icons.js'
 import { register, kbd } from '../shortcuts/index.js'
 import { toast } from '../components/toast.js'
 import { openCashCut } from './cash-cut.js'
+import { openReturn } from './return-modal.js'
+import { showAudit } from './audit-modal.js'
 import { showTicket } from './ticket-modal.js'
+import { confirmModal } from '../components/modal.js'
+import { allowed } from '../session.js'
 import { formatMoney } from '../../shared/money.js'
 
 const escape = (s) =>
@@ -51,6 +55,7 @@ export async function renderReports(container) {
         <button class="btn" data-preset="anterior" type="button">Mes pasado</button>
       </div>
       <span class="spacer"></span>
+      <button class="btn" id="r-audit" type="button">${icon('info')}Actividad</button>
       <button class="btn" id="r-cut" type="button">${icon('wallet')}Corte de caja ${kbd('Ctrl+B')}</button>
       <button class="btn primary" id="r-export" type="button">${icon('download')}Exportar a Excel</button>
     </div>
@@ -110,6 +115,7 @@ export async function renderReports(container) {
       ['Ventas', summary.sales, 'shopping-cart'],
       ['Venta bruta', formatMoney(summary.gross), 'banknote'],
       ['Comisiones', summary.commission ? `-${formatMoney(summary.commission)}` : formatMoney(0), 'credit-card'],
+      ['Devoluciones', summary.returns ? `-${formatMoney(summary.returns)}` : formatMoney(0), 'refresh-cw'],
       ['Venta neta', formatMoney(summary.net), 'wallet'],
       ['Ticket promedio', formatMoney(summary.averageTicket), 'chart-column']
     ]
@@ -169,6 +175,16 @@ export async function renderReports(container) {
               <td><span class="badge ${s.status === 'cancelled' ? 'warn' : ''}">${STATUS_LABELS[s.status] ?? s.status}</span></td>
               <td><div class="row-actions">
                 <button class="btn ghost icon-only" data-act="ticket" aria-label="Ver ticket">${icon('printer')}</button>
+                ${
+                  s.status === 'completed' && allowed('returns:create')
+                    ? `<button class="btn ghost icon-only" data-act="return" aria-label="Devolver">${icon('refresh-cw')}</button>`
+                    : ''
+                }
+                ${
+                  s.status === 'completed' && allowed('sales:cancel')
+                    ? `<button class="btn ghost icon-only danger" data-act="cancel" aria-label="Cancelar venta">${icon('x')}</button>`
+                    : ''
+                }
               </div></td>
             </tr>`
           )
@@ -220,10 +236,35 @@ export async function renderReports(container) {
   )
 
   $('#r-sales').addEventListener('click', async (e) => {
-    if (!e.target.closest('[data-act="ticket"]')) return
+    const act = e.target.closest('[data-act]')?.dataset.act
+    if (!act) return
     const id = Number(e.target.closest('[data-sale]').dataset.sale)
+
     try {
-      await showTicket(await window.api.sales.get(id))
+      const sale = await window.api.sales.get(id)
+      if (act === 'ticket') return showTicket(sale)
+
+      if (act === 'return') {
+        const dev = await openReturn(sale)
+        if (!dev?.folio) return
+        toast(`Devolución ${dev.folio} · ${formatMoney(dev.total)}`)
+        return refresh()
+      }
+
+      if (act === 'cancel') {
+        const ok = await confirmModal({
+          title: `Cancelar la venta ${sale.folio}`,
+          message:
+            `Se repondrá el stock de los ${sale.items.length} producto(s) y la venta dejará de contar ` +
+            `en los reportes. La venta no se borra: queda marcada como cancelada.`,
+          confirmLabel: 'Cancelar la venta',
+          danger: true
+        })
+        if (!ok) return
+        await window.api.sales.cancel(id)
+        toast(`Venta ${sale.folio} cancelada`)
+        return refresh()
+      }
     } catch (err) {
       toast(err.message, 'error')
     }
@@ -253,6 +294,7 @@ export async function renderReports(container) {
 
   $('#r-export').addEventListener('click', exportExcel)
   $('#r-cut').addEventListener('click', cashCut)
+  $('#r-audit').addEventListener('click', () => showAudit())
 
   await refresh()
 

@@ -136,6 +136,18 @@ export function createSalesRepo(db, { settings, products, audit }) {
       if (!sale) throw new Error('Venta no encontrada')
       if (sale.status !== 'completed') throw new Error('La venta ya no está activa')
 
+      // Con devoluciones de por medio, cancelar repondría dos veces lo ya devuelto y
+      // volvería a regresar un dinero que el cliente ya recibió. Para dejarla en cero
+      // hay que devolver lo que falta: al no quedar nada, la venta pasa a «devuelta».
+      const { devueltas } = db
+        .prepare('SELECT COUNT(*) AS devueltas FROM returns WHERE sale_id = ?')
+        .get(id)
+      if (devueltas > 0) {
+        throw new Error(
+          'Esta venta ya tiene devoluciones: no se puede cancelar. Devuelve las piezas que falten.'
+        )
+      }
+
       const restore = db.prepare('UPDATE products SET stock = stock + ? WHERE id = ?')
       const insertMove = db.prepare(
         "INSERT INTO inventory_moves (product_id, type, qty, reason, user_id) VALUES (?, 'return', ?, ?, ?)"

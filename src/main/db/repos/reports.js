@@ -3,11 +3,14 @@
 
 const RANGE = `date(s.created_at) BETWEEN @from AND @to AND s.status = 'completed'`
 
-export function createReportsRepo(db) {
+export function createReportsRepo(db, { returns }) {
   return {
-    /** Totales del periodo: bruto, comisiones y neto realmente recibido. */
+    /**
+     * Totales del periodo: bruto, comisiones, devoluciones y neto realmente recibido.
+     * Las devoluciones se restan del neto: es dinero que salió de la caja.
+     */
     summary({ from, to }) {
-      return db
+      const base = db
         .prepare(
           `SELECT
              COUNT(*)                                    AS sales,
@@ -20,6 +23,9 @@ export function createReportsRepo(db) {
            FROM sales s WHERE ${RANGE}`
         )
         .get({ from, to })
+
+      const refunded = returns.totalInRange({ from, to })
+      return { ...base, returns: refunded, net: base.net - refunded }
     },
 
     /** Desglose por método de pago (§5.3). La comisión sale de cada pago, no de la venta,

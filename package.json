@@ -16,7 +16,8 @@
     "smoke": "electron scripts/smoke.js",
     "smoke:sales": "electron scripts/smoke-sales.js",
     "smoke:reports": "electron scripts/smoke-reports.js",
-    "smoke:settings": "electron scripts/smoke-settings.js"
+    "smoke:settings": "electron scripts/smoke-settings.js",
+    "smoke:extras": "electron scripts/smoke-extras.js"
   },
   "devDependencies": {
     "electron": "^44.4.3",

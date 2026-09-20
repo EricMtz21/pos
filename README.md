@@ -21,7 +21,10 @@ archivo local que puedes respaldar copiando y pegar.
   y exportación a Excel.
 - **Corte de caja** con arqueo: compara lo que debería haber en el cajón contra lo que
   contaste y registra la diferencia.
-- **Respaldos y restauración** de la base de datos desde la propia aplicación.
+- **Devoluciones y cancelaciones**, con reposición automática de stock.
+- **Usuarios con PIN y roles** (administrador y cajero), opcionales.
+- **Historial** de cambios de precio y movimientos de inventario.
+- **Respaldos y restauración** de la base de datos, con respaldo automático diario.
 - **Modo claro y oscuro**, con acento configurable.
 
 ## Cómo funcionan los precios
@@ -99,6 +102,35 @@ Desde aquí también puedes respaldar la base, guardar una copia para llevártel
 computadora o restaurar desde un respaldo. Antes de restaurar se comprueba que el
 archivo sea una base de este sistema y se respalda la actual, por si te arrepientes.
 
+## Devoluciones y cancelaciones
+
+Desde el detalle de ventas puedes **devolver** piezas sueltas o la venta completa: el stock
+vuelve, se registra el motivo y el importe se descuenta del neto en los reportes. La venta
+original nunca se modifica, así el histórico sigue siendo fiel a lo que pasó.
+
+**Cancelar** es distinto: deshace la venta entera y repone todo. Una venta que ya tiene
+devoluciones no se puede cancelar —repondría el stock dos veces y regresaría un dinero que
+el cliente ya recibió—; para dejarla en cero se devuelve lo que falte, y al no quedar piezas
+la venta pasa sola a «devuelta».
+
+## Usuarios y roles
+
+Son opcionales. Mientras no crees ningún usuario, la aplicación abre sin PIN y permite todo.
+Al crear el primero se empieza a pedir PIN al arrancar.
+
+| | Administrador | Cajero |
+|---|---|---|
+| Vender, cobrar, imprimir | Sí | Sí |
+| Corte de caja y reportes | Sí | Sí |
+| Ver inventario e historial | Sí | Sí |
+| Crear o editar productos y precios | Sí | No |
+| Ajustar stock | Sí | No |
+| Cancelar ventas y devolver | Sí | No |
+| Ajustes, usuarios y respaldos | Sí | No |
+
+Los permisos se comprueban en el proceso principal, no solo en la pantalla: ocultar un botón
+no es una medida de seguridad.
+
 ## Instalación para desarrollo
 
 Requiere **Node.js 22.12 o superior**.
@@ -131,6 +163,7 @@ POS_SEED=1 npm run dev
 | `npm run smoke:sales` | Prueba de interfaz: flujo completo de venta |
 | `npm run smoke:reports` | Prueba de interfaz: reportes, corte de caja y exportación |
 | `npm run smoke:settings` | Prueba de interfaz: ajustes, respaldo y restauración |
+| `npm run smoke:extras` | Prueba de interfaz: devoluciones, roles e historial |
 
 ## Dónde viven los datos
 
@@ -144,8 +177,8 @@ de datos del usuario:
 | Linux | `~/.config/pos-offline/pos.sqlite` |
 
 Esto significa que **actualizar la aplicación no borra la información**. El esquema se
-migra solo al arrancar, y antes de cada migración se guarda un respaldo automático en
-la subcarpeta `backups/`.
+migra solo al arrancar, y se guarda un respaldo automático en la subcarpeta `backups/`
+antes de cada migración, en cada corte de caja y una vez al día al abrir la aplicación.
 
 Para mover el negocio a otra computadora basta copiar ese archivo `.sqlite`.
 
@@ -179,10 +212,10 @@ proceso principal siempre recalcula al guardar: nunca confía en lo que le manda
 ## Estado
 
 Funcionando: ventas, inventario, comisiones de tarjeta, ticket e impresión, reportes
-con exportación a Excel, corte de caja, ajustes y respaldos.
+con exportación a Excel, corte de caja, ajustes, respaldos, devoluciones,
+cancelaciones, historial y roles de usuario.
 
-En camino: cancelaciones y devoluciones, roles de usuario, personalización de atajos
-y actualizaciones automáticas.
+En camino: personalización de atajos y actualizaciones automáticas.
 
 ## Tecnologías
 

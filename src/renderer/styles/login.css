@@ -1,0 +1,98 @@
+/* ── Acceso con PIN ──────────────────────────────────────── */
+.login {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+  overflow: auto;
+}
+
+.login-card {
+  display: grid;
+  gap: 14px;
+  width: min(420px, 100%);
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.login-card .brand {
+  padding: 0;
+  justify-content: center;
+}
+
+.login-card .hint {
+  text-align: center;
+}
+
+.login-users {
+  display: grid;
+  gap: 6px;
+  max-height: 210px;
+  overflow: auto;
+}
+
+.login-user {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 11px 14px;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+
+.login-user[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
+.login-user strong {
+  flex: 1;
+}
+
+.pin-display {
+  padding: 12px;
+  text-align: center;
+  font-size: 26px;
+  letter-spacing: 0.4em;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  min-height: 52px;
+}
+
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.pin-pad .btn {
+  justify-content: center;
+  padding: 15px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.login .errors {
+  margin: 0;
+  min-height: 18px;
+  text-align: center;
+}
+
+/* ── Devoluciones ────────────────────────────────────────── */
+.return-items input[type='number'] {
+  width: 84px;
+  text-align: right;
+  padding: 6px 10px;
+}
+
+.modal-head .btn.ghost {
+  font-size: 13px;
+}
