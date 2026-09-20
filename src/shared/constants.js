@@ -10,7 +10,7 @@ export const THEMES = ['light', 'dark', 'system']
 // lo que no esté guardado se toma de aquí.
 export const SETTINGS_DEFAULTS = {
   theme: 'system',
-  accent: '#C7F04A',
+  accent: '#3B82F6',
   lowStockThreshold: 5,
   business: { name: 'Mi Negocio', address: '', taxId: '', phone: '', footer: '¡Gracias por su compra!' },
   ticket: { width: 58, autoPrint: false, printer: '' },

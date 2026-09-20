@@ -42,8 +42,7 @@
   max-height: 320px;
   overflow: auto;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
 
@@ -91,7 +90,6 @@
   min-height: 0;
   overflow: auto;
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -138,7 +136,6 @@
   gap: 14px;
   padding: 20px;
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   align-self: start;
@@ -210,7 +207,7 @@
   padding: 14px 8px;
   background: var(--surface-2);
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   font-size: 13px;
   font-weight: 500;
   transition: border-color 0.15s var(--ease);
@@ -232,7 +229,7 @@
 }
 
 :root[data-theme='light'] .method[aria-pressed='true'] .icon {
-  color: #6f9a12;
+  color: color-mix(in srgb, var(--accent) 80%, #0b1220);
 }
 
 .quick-cash {
@@ -249,7 +246,7 @@
   margin-top: 16px;
   padding: 14px 16px;
   background: var(--surface-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   font-variant-numeric: tabular-nums;
 }
 
@@ -269,7 +266,7 @@
   margin-top: 16px;
   padding: 14px 16px;
   background: var(--surface-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
@@ -304,7 +301,7 @@
   justify-content: space-between;
   padding: 10px 14px;
   margin-top: 10px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   background: var(--surface-2);
   font-variant-numeric: tabular-nums;
 }
@@ -322,7 +319,7 @@
   padding: 18px;
   background: #fff;
   color: #000;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   overflow: auto;
 }
 

@@ -32,7 +32,6 @@
   gap: 4px 10px;
   padding: 16px 18px;
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -60,7 +59,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 20px;
-  padding-bottom: 8px;
+  /* Ver settings.css: el padding-bottom de .main no se renderiza al hacer scroll. */
+  padding-bottom: 32px;
 }
 
 .panel.wide {
@@ -97,7 +97,7 @@ tr.cancelled .badge {
   gap: 6px;
   padding: 16px 18px;
   background: var(--surface-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
 }
 
 .cut-summary .totals-row.grand {

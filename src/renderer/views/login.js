@@ -1,4 +1,3 @@
-import { icon, hydrateIcons } from '../icons.js'
 import { refreshSession } from '../session.js'
 
 /**
@@ -16,8 +15,7 @@ export async function showLogin() {
   overlay.innerHTML = `
     <div class="login-card">
       <div class="brand">
-        <span class="brand-mark">${icon('shopping-cart')}</span>
-        <span class="brand-name">POS</span>
+        <span class="brand-name">Punto de Venta</span>
       </div>
       <p class="hint">Elige tu usuario e introduce tu PIN.</p>
 
@@ -43,7 +41,6 @@ export async function showLogin() {
       </div>
     </div>`
   document.body.append(overlay)
-  hydrateIcons(overlay)
 
   const $ = (sel) => overlay.querySelector(sel)
 

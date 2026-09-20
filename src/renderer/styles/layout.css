@@ -53,16 +53,6 @@
   letter-spacing: -0.02em;
 }
 
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  color: var(--accent-contrast);
-  background: var(--accent);
-  border-radius: 11px;
-}
-
 .nav {
   display: grid;
   gap: 4px;
@@ -78,7 +68,7 @@
   color: var(--text-muted);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: var(--radius);
   transition: background 0.15s var(--ease), color 0.15s var(--ease);
 }
 
@@ -90,7 +80,6 @@
 .nav-item.active {
   color: var(--text);
   background: var(--surface);
-  border-color: var(--border);
   box-shadow: var(--shadow);
 }
 
@@ -98,7 +87,8 @@
   color: var(--accent);
 }
 :root[data-theme='light'] .nav-item.active .icon {
-  color: #6f9a12;
+  /* Se oscurece el acento elegido en vez de fijar un color: así funciona con cualquiera. */
+  color: color-mix(in srgb, var(--accent) 80%, #0b1220);
 }
 
 .nav-label {
@@ -148,7 +138,6 @@
 .card {
   padding: 24px;
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -183,7 +172,7 @@
 .stat {
   padding: 10px 16px;
   background: var(--surface-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
 }
 
 .stat strong {

@@ -1,16 +1,17 @@
 /* ── Ajustes ─────────────────────────────────────────────── */
 .settings {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  grid-template-columns: 1fr; /* una sola columna: cada panel ocupa todo el ancho */
   gap: 20px;
   align-items: start;
-  padding-bottom: 8px;
+  /* Igual al margen lateral de .main: en un contenedor con scroll su
+     padding-bottom no se renderiza, así que el aire final va aquí. */
+  padding-bottom: 32px;
 }
 
 .settings .panel {
   padding: 22px;
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -19,7 +20,7 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-bottom: 4px;
+  margin-bottom: 14px;
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
@@ -30,7 +31,12 @@
 }
 
 .settings .panel > .hint {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+}
+
+/* La línea de apoyo explica el título: va pegada a él, y el aire queda debajo. */
+.settings .panel h3 + .hint {
+  margin-top: -4px;
 }
 
 .settings .form-grid {
@@ -41,7 +47,7 @@
   padding: 1px 5px;
   font-size: 12px;
   background: var(--surface-2);
-  border-radius: 5px;
+  border-radius: var(--radius);
   word-break: break-all;
 }
 
@@ -115,7 +121,7 @@
   color: var(--text-muted);
   background: var(--surface-2);
   border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   overflow: hidden;
   word-break: break-all;
 }
@@ -147,6 +153,9 @@
 }
 
 table.tiers {
+  /* Sin tope, en un panel a todo el ancho el monto y su porcentaje quedan a medio
+     panel de distancia y cuesta leer qué tasa corresponde a cada tramo. */
+  max-width: 560px;
   margin-bottom: 10px;
 }
 
@@ -159,6 +168,12 @@ table.tiers th {
 table.tiers td {
   padding: 5px 8px;
   border-bottom: none;
+}
+
+/* Aire entre la línea del encabezado y el primer tramo: pegados, el «4 %» parecía
+   parte del título de la columna. */
+table.tiers tbody tr:first-child td {
+  padding-top: 14px;
 }
 
 table.tiers tbody tr:hover td {
@@ -181,6 +196,11 @@ table.tiers input {
   text-align: right;
 }
 
+/* El ejemplo va despegado del botón «Agregar tramo», no como si fuera su etiqueta. */
+#c-example {
+  margin-top: 16px;
+}
+
 .errors {
   margin-top: 10px;
   color: #ef5b5b;
@@ -191,12 +211,19 @@ table.tiers input {
   display: none;
 }
 
+/* La vista previa del ticket reutiliza el «papel» del modal, con altura acotada. */
+.ticket-preview {
+  max-height: 340px;
+  width: fit-content;
+  max-width: 100%;
+}
+
 /* ── Progreso de descarga ────────────────────────────────── */
 .update-progress {
   height: 6px;
   margin-top: 10px;
   background: var(--surface-2);
-  border-radius: 999px;
+  border-radius: var(--radius);
   overflow: hidden;
 }
 

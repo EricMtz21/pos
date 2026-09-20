@@ -59,7 +59,7 @@ function createWindow() {
     minHeight: 600,
     show: false,
     title: 'POS',
-    backgroundColor: '#0E0F0D',
+    backgroundColor: '#0D0F12',
     webPreferences: {
       // __dirname: el bundle de main se emite como CommonJS (ver electron.vite.config.js).
       preload: join(__dirname, '../preload/index.cjs'),

@@ -16,7 +16,6 @@
   width: min(420px, 100%);
   padding: 28px;
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -45,7 +44,7 @@
   text-align: left;
   background: var(--surface-2);
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
 }
 
 .login-user[aria-pressed='true'] {
@@ -63,7 +62,7 @@
   letter-spacing: 0.4em;
   font-variant-numeric: tabular-nums;
   background: var(--surface-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   min-height: 52px;
 }
 
