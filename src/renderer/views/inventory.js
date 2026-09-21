@@ -38,73 +38,17 @@ function rowHtml(p) {
 }
 
 /**
- * Cabecera del inventario: lo que hay, lo que vale y cómo está de existencias.
- * Las cifras salen de la base entera, no de las filas cargadas: la búsqueda está
- * limitada, y el valor del almacén no puede depender de lo que se esté filtrando.
- */
-function headHtml(resumen) {
-  const card = ([label, value, ic]) => `<div class="report-card">
-    <span class="label">${label}</span><strong>${value}</strong>${icon(ic)}
-  </div>`
-
-  const total = resumen.healthy + resumen.low + resumen.out
-  const tramos = [
-    ['ok', 'Con existencia', resumen.healthy],
-    ['baja', 'Stock bajo', resumen.low],
-    ['nula', 'Agotados', resumen.out]
-  ].filter(([, , n]) => n > 0)
-
-  return `
-    <div class="report-cards">
-      <div class="card-group">
-        <span class="group-label">Qué hay</span>
-        <div class="card-row">
-          ${[
-            ['Productos', resumen.products, 'package'],
-            ['Piezas', resumen.units, 'shopping-cart'],
-            ['Valor a costo', formatMoney(resumen.costValue), 'banknote']
-          ].map(card).join('')}
-        </div>
-      </div>
-      <div class="card-group">
-        <span class="group-label">Cómo está el anaquel</span>
-        <div class="stock-health">
-          <div class="health-bar" role="img" aria-label="${resumen.healthy} con existencia, ${resumen.low} con stock bajo, ${resumen.out} agotados">
-            ${
-              total
-                ? tramos
-                    .map(([clase, texto, n]) => `<span class="seg ${clase}" style="--w:${(n / total) * 100}%" title="${texto}: ${n}"></span>`)
-                    .join('')
-                : '<span class="seg vacia" style="--w:100%"></span>'
-            }
-          </div>
-          <ul class="health-legend">
-            ${[
-              ['ok', 'Con existencia', resumen.healthy],
-              ['baja', 'Stock bajo', resumen.low],
-              ['nula', 'Agotados', resumen.out]
-            ]
-              .map(([clase, texto, n]) => `<li class="${clase}"><span class="dot"></span>${texto}<strong>${n}</strong></li>`)
-              .join('')}
-          </ul>
-        </div>
-      </div>
-    </div>`
-}
-
-/**
  * Pantalla sin filas. Cada caso dice algo distinto: un inventario recién instalado no
  * es lo mismo que una búsqueda sin resultados, y no encontrar nada por reponer es una
  * buena noticia, no un vacío.
  */
-function emptyHtml({ hayProductos, filtros }) {
-  const caso = !hayProductos
-    ? ['El inventario está vacío', 'Escanea un producto con el lector para darlo de alta, o usa «Nuevo producto».']
-    : filtros.lowStockOnly
-      ? ['Nada por reponer', 'Ningún producto activo está por debajo de su mínimo.']
-      : filtros.text
-        ? ['Sin coincidencias', `Ningún producto con «${escape(filtros.text)}» en el nombre o el código.`]
-        : ['Sin productos que mostrar', 'Revisa los filtros de la barra de arriba.']
+function emptyHtml(filtros) {
+  const caso = filtros.lowStockOnly
+    ? ['Nada por reponer', 'Ningún producto activo está por debajo de su mínimo.']
+    : filtros.text
+      ? ['Sin coincidencias', `Ningún producto con «${escape(filtros.text)}» en el nombre o el código.`]
+      // Sin filtros y sin filas: no hay nada dado de alta todavía.
+      : ['El inventario está vacío', 'Escanea un producto con el lector para darlo de alta, o usa «Nuevo producto».']
 
   return `<tr><td colspan="7">
     <div class="inv-empty">
@@ -126,7 +70,6 @@ export async function renderInventory(container) {
   const filters = { text: '', lowStockOnly: false }
 
   container.innerHTML = `
-    <div id="inv-head"></div>
     <div class="toolbar">
       <div class="search">
         ${icon('search')}
@@ -158,15 +101,10 @@ export async function renderInventory(container) {
   const lowBtn = container.querySelector('#inv-low')
 
   async function refresh() {
-    const [products, resumen] = await Promise.all([
-      window.api.products.search(filters),
-      window.api.products.summary()
-    ])
-    container.querySelector('#inv-head').innerHTML = headHtml(resumen)
-    hydrateIcons(container.querySelector('#inv-head'))
+    const products = await window.api.products.search(filters)
     tbody.innerHTML = products.length
       ? products.map(rowHtml).join('')
-      : emptyHtml({ hayProductos: resumen.products > 0, filtros: filters })
+      : emptyHtml(filters)
     hydrateIcons(tbody)
   }
 

@@ -125,7 +125,6 @@ export function registerIpc({ repos, appInfo, backup, data, updater }) {
   handle('products:update', (id, data) => products.update(id, data, { userId: currentUserId() }))
   handle('products:deactivate', (id) => products.deactivate(id, { userId: currentUserId() }))
   handle('products:lowStock', () => products.lowStock())
-  handle('products:summary', () => products.summary())
   handle('products:adjustStock', (args) => products.adjustStock({ ...args, userId: currentUserId() }))
   handle('products:moves', (id, limit) => products.moves(id, limit))
   handle('products:history', (id) => repos.audit.list({ entity: 'product', entityId: id, limit: 50 }))

@@ -1,79 +1,4 @@
-/* ── Inventario ──────────────────────────────────────────────
-   Las tarjetas de arriba reutilizan el estilo de reportes (.report-cards): son la misma
-   idea —una cifra grande con su rótulo— y tenerlas iguales evita dos dialectos visuales. */
-.stock-health {
-  display: grid;
-  gap: 12px;
-  padding: 16px 18px;
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-}
-
-/* Tres estados y no más: lo que se puede vender, lo que hay que pedir y lo que ya
-   se acabó. El ámbar y el rojo son los mismos de los avisos del resto de la app. */
-.stock-health {
-  --salud-ok: var(--accent);
-  --salud-baja: #d69e2e;
-  --salud-nula: #ef5b5b;
-}
-
-:root[data-theme='dark'] .stock-health {
-  --salud-baja: #e8c26a;
-}
-
-.health-bar {
-  display: flex;
-  height: 10px;
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: var(--surface-2);
-}
-
-.health-bar .seg {
-  width: var(--w);
-  /* Crecen una vez al pintar, de izquierda a derecha. */
-  animation: estirar 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  transform-origin: left;
-}
-
-.health-bar .seg.ok { background: var(--salud-ok); }
-.health-bar .seg.baja { background: var(--salud-baja); }
-.health-bar .seg.nula { background: var(--salud-nula); }
-.health-bar .seg.vacia { background: var(--surface-2); }
-
-.health-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 20px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.health-legend li {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.health-legend .dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.health-legend .ok .dot { background: var(--salud-ok); }
-.health-legend .baja .dot { background: var(--salud-baja); }
-.health-legend .nula .dot { background: var(--salud-nula); }
-
-.health-legend strong {
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
+/* ── Inventario ──────────────────────────────────────────── */
 /* ── Sin filas: una caja con su etiqueta ──────────────────── */
 .inv-empty {
   display: grid;
@@ -156,10 +81,4 @@
   border-radius: 2px;
   background: var(--text-muted);
   opacity: 0.3;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .health-bar .seg {
-    animation: none;
-  }
 }

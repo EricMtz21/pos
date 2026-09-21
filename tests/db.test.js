@@ -144,26 +144,6 @@ test('stock: alerta por umbral global o por producto, y movimientos atómicos', 
   assert.equal(products.get(a.id).stock, 4)
 })
 
-test('resumen del inventario: valora lo que hay y reparte los productos en tres estados', () => {
-  const { products, settings } = createRepos(openDatabase(':memory:'))
-  settings.set({ lowStockThreshold: 5 })
-  products.create({ name: 'Con existencia', stock: 20, cost: 1000, price_gross: 1800 })
-  products.create({ name: 'Por reponer', stock: 3, cost: 500, price_gross: 900 })
-  products.create({ name: 'Agotado', stock: 0, cost: 700, price_gross: 1200 })
-  // Se permite vender por debajo del conteo: el stock negativo existe y hay que valorarlo.
-  products.create({ name: 'En negativo', stock: -4, cost: 900, price_gross: 1500 })
-  const baja = products.create({ name: 'Dado de baja', stock: 50, cost: 100, price_gross: 200 })
-  products.deactivate(baja.id)
-
-  const r = products.summary()
-  assert.equal(r.products, 4, 'los desactivados no cuentan')
-  assert.equal(r.units, 23, 'el stock negativo no resta piezas que no están')
-  assert.equal(r.costValue, 20 * 1000 + 3 * 500)
-  assert.equal(r.saleValue, 20 * 1800 + 3 * 900)
-  assert.deepEqual([r.healthy, r.low, r.out], [1, 1, 2], 'agotado y negativo son lo mismo: no hay qué vender')
-  assert.equal(r.healthy + r.low + r.out, r.products, 'cada producto cae en un estado y solo uno')
-})
-
 test('seed: solo inserta en una base sin productos', () => {
   const repos = createRepos(openDatabase(':memory:'))
   assert.equal(seedSampleData(repos), true)
