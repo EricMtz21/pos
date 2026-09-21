@@ -1,0 +1,165 @@
+/* ── Inventario ──────────────────────────────────────────────
+   Las tarjetas de arriba reutilizan el estilo de reportes (.report-cards): son la misma
+   idea —una cifra grande con su rótulo— y tenerlas iguales evita dos dialectos visuales. */
+.stock-health {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Tres estados y no más: lo que se puede vender, lo que hay que pedir y lo que ya
+   se acabó. El ámbar y el rojo son los mismos de los avisos del resto de la app. */
+.stock-health {
+  --salud-ok: var(--accent);
+  --salud-baja: #d69e2e;
+  --salud-nula: #ef5b5b;
+}
+
+:root[data-theme='dark'] .stock-health {
+  --salud-baja: #e8c26a;
+}
+
+.health-bar {
+  display: flex;
+  height: 10px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.health-bar .seg {
+  width: var(--w);
+  /* Crecen una vez al pintar, de izquierda a derecha. */
+  animation: estirar 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transform-origin: left;
+}
+
+.health-bar .seg.ok { background: var(--salud-ok); }
+.health-bar .seg.baja { background: var(--salud-baja); }
+.health-bar .seg.nula { background: var(--salud-nula); }
+.health-bar .seg.vacia { background: var(--surface-2); }
+
+.health-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.health-legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.health-legend .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.health-legend .ok .dot { background: var(--salud-ok); }
+.health-legend .baja .dot { background: var(--salud-baja); }
+.health-legend .nula .dot { background: var(--salud-nula); }
+
+.health-legend strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Sin filas: una caja con su etiqueta ──────────────────── */
+.inv-empty {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 30px 24px 34px;
+  text-align: center;
+}
+
+.inv-empty-title {
+  margin-top: 20px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.box-stack {
+  position: relative;
+  width: 150px;
+  height: 92px;
+}
+
+.box {
+  position: absolute;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+}
+
+/* Las dos se apoyan en el anaquel; la de atrás solo da profundidad y la de delante
+   es la que lleva la etiqueta. */
+/* Apenas se solapan: dos cajas que se tapan del todo se leen como una sola mancha. */
+.box-back {
+  left: 0;
+  bottom: 8px;
+  width: 58px;
+  height: 58px;
+  /* Bajarle la opacidad la hacía desaparecer: el fondo del panel y el de la caja se
+     parecen demasiado. Se tiñe hacia el gris del texto, que separa en los dos temas. */
+  background: color-mix(in srgb, var(--surface-2) 75%, var(--text-muted));
+}
+
+.box-front {
+  right: 6px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 94px;
+  height: 68px;
+  box-shadow: var(--shadow);
+}
+
+/* La etiqueta pegada en la caja: es lo que el lector lee, y lo que explica de qué va
+   esta pantalla sin escribirlo. */
+.box-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 26px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--surface-2) 70%, var(--text-muted));
+}
+
+.box-label .barcode {
+  width: 56px;
+  height: 15px;
+  fill: var(--text);
+  opacity: 0.7;
+}
+
+/* El anaquel donde se apoyan: sin él, las cajas flotan. */
+.box-shelf {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .health-bar .seg {
+    animation: none;
+  }
+}

@@ -73,6 +73,30 @@ export function createProductsRepo(db, { settings, audit }) {
       return this.search({ lowStockOnly: true, limit: 1000 })
     },
 
+    /**
+     * Cifras de la existencia para la cabecera de Inventario. Se calculan en SQL sobre
+     * todos los productos activos, no sobre los que la pantalla tenga cargados: la
+     * búsqueda está limitada y el valor del almacén no puede depender de lo que se filtre.
+     *
+     * El stock negativo cuenta como cero para el dinero (se permite vender por debajo del
+     * conteo): lo que no está en el anaquel no vale nada, aunque el número diga -3.
+     */
+    summary() {
+      return db
+        .prepare(
+          `SELECT
+             COUNT(*)                                          AS products,
+             COALESCE(SUM(MAX(p.stock, 0)), 0)                 AS units,
+             COALESCE(SUM(MAX(p.stock, 0) * p.cost), 0)        AS costValue,
+             COALESCE(SUM(MAX(p.stock, 0) * p.price_gross), 0) AS saleValue,
+             COALESCE(SUM(p.stock > COALESCE(p.min_stock, @threshold)), 0) AS healthy,
+             COALESCE(SUM(p.stock > 0 AND p.stock <= COALESCE(p.min_stock, @threshold)), 0) AS low,
+             COALESCE(SUM(p.stock <= 0), 0)                    AS out
+           FROM products p WHERE p.active = 1`
+        )
+        .get({ threshold: threshold() })
+    },
+
     create(data, { userId = null } = {}) {
       validate(data, { partial: false })
       const row = normalize(data)

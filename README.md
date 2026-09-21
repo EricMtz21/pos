@@ -12,7 +12,9 @@ archivo local que puedes respaldar copiando y pegar.
   El lector de código de barras USB funciona sin instalar nada y en cualquier pantalla:
   no hace falta tener el cursor puesto en la caja de búsqueda.
 - **Funciona sin internet.** Toda la operación es local; no hay servidor ni cuenta que crear.
-- **Inventario** con precios, costos, márgenes y alertas de stock bajo.
+- **Inventario** con precios, costos, márgenes y alertas de stock bajo, y una cabecera
+  que dice cuántos productos hay, cuántas piezas, cuánto vale el almacén a costo y cómo
+  está repartido entre con existencia, por reponer y agotados.
 - **Descuentos** sobre la venta, en pesos o en porcentaje, y **precio a mano** por línea
   para vender a granel o hacer un precio especial.
 - **Métodos de pago:** efectivo (con cálculo de cambio), débito, crédito, transferencia y

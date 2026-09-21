@@ -29,6 +29,26 @@ electron.app
     check(!shell.emojis, 'hay emojis en la UI')
     check(shell.rows === 8, `el inventario mostró ${shell.rows} filas, se esperaban 8 del seed`)
     check(shell.lowBadges === 2, `alertas de stock bajo: ${shell.lowBadges}, se esperaban 2`)
+
+    // ── Cabecera: las cifras salen de la base, no de las filas cargadas ──
+    const cabecera = await run(`(async () => {
+      const r = await window.api.products.summary()
+      return {
+        resumen: r,
+        tarjetas: [...document.querySelectorAll('#inv-head .report-card')]
+          .map(c => c.querySelector('.label').textContent + '=' + c.querySelector('strong').textContent),
+        segmentos: [...document.querySelectorAll('.health-bar .seg')].map(s => s.className),
+        leyenda: [...document.querySelectorAll('.health-legend li strong')].map(l => Number(l.textContent))
+      }
+    })()`)
+    check(cabecera.resumen.products === 8, `el resumen cuenta ${cabecera.resumen.products} productos, se esperaban 8`)
+    check(cabecera.resumen.low === 2, `el resumen ve ${cabecera.resumen.low} con stock bajo, se esperaban 2`)
+    check(cabecera.tarjetas.some((t) => /^Productos=8$/.test(t)), `tarjetas de la cabecera: ${cabecera.tarjetas}`)
+    check(
+      cabecera.leyenda.reduce((a, b) => a + b, 0) === cabecera.resumen.products,
+      `la leyenda suma ${cabecera.leyenda} y hay ${cabecera.resumen.products} productos`
+    )
+    check(cabecera.segmentos.length === 2, `la barra dibuja ${cabecera.segmentos.length} tramos; sin agotados son 2`)
     await shot('inventario')
 
     // ── Alta de producto (con el cálculo de IVA en vivo) ──
@@ -76,10 +96,20 @@ electron.app
              s.dispatchEvent(new Event('input', { bubbles: true })) })()`)
     await search('café')
     await waitFor(`document.querySelectorAll('#inv-rows tr').length === 1`, 'la búsqueda filtra la tabla')
+
+    // Sin coincidencias no se enseña una línea de texto: se dibuja una caja y se dice
+    // qué se buscó. El mensaje cambia según por qué no hay filas.
+    await search('zzzz')
+    await waitFor(`document.querySelector('.inv-empty .box-stack')`, 'la búsqueda sin resultados dibuja la caja')
+    const sinCoincidencias = await run(`document.querySelector('.inv-empty').innerText`)
+    check(/Sin coincidencias/.test(sinCoincidencias), `mensaje de búsqueda vacía: ${sinCoincidencias}`)
+    check(/zzzz/.test(sinCoincidencias), 'el aviso no repite lo que se buscó')
+
     await search('')
     await waitFor(`document.querySelectorAll('#inv-rows tr').length === 9`, 'limpiar la búsqueda restaura la tabla')
 
     // ── Ajuste de stock ──────────────────────────────────
+    const piezasAntes = await run(`window.api.products.summary().then(r => r.units)`)
     await run(`document.querySelector('#inv-rows tr [data-act="stock"]').click()`)
     await waitFor(`document.querySelector('#stock-form')`, 'el formulario de stock abre')
     await run(`(() => {
@@ -88,6 +118,11 @@ electron.app
     })()`)
     await run(`document.querySelector('[form="stock-form"]').click()`)
     await waitFor(`/Stock de/.test([...document.querySelectorAll('.toast')].at(-1)?.textContent ?? '')`, 'confirmación del ajuste de stock')
+    // Entraron 10 piezas: la cabecera se repinta con la tabla, no se queda con lo viejo.
+    await waitFor(
+      `window.api.products.summary().then(r => r.units === ${piezasAntes} + 10)`,
+      'las piezas de la cabecera no siguieron al ajuste de stock'
+    )
 
     // ── Ayuda F1 ─────────────────────────────────────────
     await key('F1')

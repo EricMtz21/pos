@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('api', {
     update: (id, data) => call('products:update', id, data),
     deactivate: (id) => call('products:deactivate', id),
     lowStock: () => call('products:lowStock'),
+    summary: () => call('products:summary'),
     adjustStock: (args) => call('products:adjustStock', args),
     moves: (id, limit) => call('products:moves', id, limit),
     history: (id) => call('products:history', id)
