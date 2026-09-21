@@ -63,6 +63,9 @@
 /* ── Campos ──────────────────────────────────────────────── */
 .field {
   display: grid;
+  /* Las filas se quedan con su alto natural. Sin esto, un campo sin nota junto a otro
+     con nota estiraba su input para llenar el hueco y los dos dejaban de alinearse. */
+  align-content: start;
   gap: 6px;
 }
 
@@ -72,8 +75,13 @@
   color: var(--text-muted);
 }
 
-.field .hint {
+/* Una nota de apoyo se ve igual esté donde esté: dentro de un campo, bajo un título o
+   debajo de un interruptor. Antes solo las de dentro de .field se veían como tales, y
+   las demás salían como texto normal, más grandes y más brillantes que el ajuste. */
+.hint {
   font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
   color: var(--text-muted);
 }
 

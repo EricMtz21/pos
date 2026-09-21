@@ -63,7 +63,9 @@ export async function renderSettings(container) {
             <select name="width">
               <option value="58"${settings.ticket.width === 58 ? ' selected' : ''}>58 mm (32 caracteres)</option>
               <option value="80"${settings.ticket.width === 80 ? ' selected' : ''}>80 mm (48 caracteres)</option>
-            </select></label>
+            </select>
+            <span class="hint">Tiene que coincidir con el rollo que carga la impresora, o el
+              ticket saldrá cortado o angosto.</span></label>
           <label class="field"><span>Impresora</span>
             <select name="printer" id="s-printer"><option value="">Cargando…</option></select>
             <span class="hint">Con una impresora elegida el ticket sale directo. Sin elegir,

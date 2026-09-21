@@ -206,11 +206,20 @@ tr.cancelled .badge {
    Dibujados con CSS y SVG a mano. Los tonos salen del acento con color-mix, así que
    cambiar el color de la app en Ajustes cambia también los gráficos. */
 .chart {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* Alto fijo, haya datos o no: el panel no salta al llegar la primera venta, y los
+     avisos de dos paneles vecinos caen a la misma altura. */
+  min-height: 178px;
   margin-bottom: 16px;
 }
 
 .chart-note {
-  margin-top: 14px;
+  /* Pegado al fondo del gráfico: así el aviso de dos paneles vecinos queda a la misma
+     altura aunque uno dibuje una dona y el otro unas barras. */
+  margin-top: auto;
+  padding-top: 12px;
   font-size: 12px;
   text-align: center;
   color: var(--text-muted);
@@ -328,8 +337,11 @@ tr.cancelled .badge {
 /* ── Dona (métodos de pago) ── */
 .chart-donut {
   display: flex;
+  /* .chart es columna; aquí la dona y su leyenda van lado a lado. */
+  flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 18px 22px;
 }
 
