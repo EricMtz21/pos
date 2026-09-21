@@ -25,6 +25,9 @@
   --text-muted: #5b6472;
   --border: rgba(20, 24, 31, 0.08);
   --sidebar-bg: rgba(255, 255, 255, 0.55);
+  /* Color hacia el que degradan los tonos de los gráficos. Va al revés en cada tema:
+     sobre fondo claro los tramos se oscurecen, y sobre fondo oscuro se aclaran. */
+  --chart-fade: #0b1220;
   --shadow: 0 1px 2px rgba(20, 22, 26, 0.05), 0 8px 24px rgba(20, 22, 26, 0.06);
   --glow: rgba(59, 130, 246, 0.22);
 }
@@ -38,6 +41,7 @@
   --text-muted: #9aa3ae;
   --border: rgba(255, 255, 255, 0.08);
   --sidebar-bg: rgba(18, 21, 26, 0.45);
+  --chart-fade: #dce7f7;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
   --glow: rgba(59, 130, 246, 0.18);
 }

@@ -22,8 +22,9 @@ archivo local que puedes respaldar copiando y pegar.
 - **Ticket** para impresora térmica de 58 u 80 mm, o exportado a PDF. Con una impresora
   fija sale directo, sin diálogo de Windows en cada venta.
 - **Cajón de dinero:** se abre solo al cobrar en efectivo, a través de la impresora.
-- **Reportes por rango de fechas** con desglose por método de pago, productos más vendidos
-  y exportación a Excel. También se busca una venta por folio, sin acertar la fecha.
+- **Reportes por rango de fechas** con gráficos de venta diaria, reparto por método de
+  pago y ranking de productos, más el detalle en tabla y exportación a Excel. También se
+  busca una venta por folio, sin acertar la fecha.
 - **Corte de caja** con arqueo: compara lo que debería haber en el cajón contra lo que
   contaste y registra la diferencia.
 - **Devoluciones y cancelaciones**, con reposición automática de stock.

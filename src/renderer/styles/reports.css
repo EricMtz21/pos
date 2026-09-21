@@ -201,3 +201,362 @@ tr.cancelled .badge {
 .arqueo .change-box {
   margin-top: 10px;
 }
+
+/* ── Gráficos ────────────────────────────────────────────────
+   Dibujados con CSS y SVG a mano. Los tonos salen del acento con color-mix, así que
+   cambiar el color de la app en Ajustes cambia también los gráficos. */
+.chart {
+  margin-bottom: 16px;
+}
+
+.chart-note {
+  margin-top: 14px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Tonos derivados del acento: el primero puro y los siguientes degradando hacia
+   --chart-fade, que cambia con el tema. Así la escala se distingue en claro y en oscuro
+   sin salirse del color que el negocio eligió en Ajustes. */
+.chart [style*='--tono'] {
+  --tinte: color-mix(in srgb, var(--accent) calc(100% - var(--tono, 0) * 24%), var(--chart-fade));
+}
+
+/* ── Barras verticales (venta por día) ── */
+.chart-plot {
+  position: relative;
+  padding-left: 34px;
+}
+
+.chart-axis {
+  position: absolute;
+  left: 0;
+  top: -4px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.chart-axis.half {
+  top: calc(50% - 22px);
+}
+
+/* Las dos líneas de referencia: sin ellas las barras flotan y no se comparan. */
+.chart-plot::before,
+.chart-plot::after {
+  content: '';
+  position: absolute;
+  left: 34px;
+  right: 0;
+  border-top: 1px dashed var(--border);
+}
+
+.chart-plot::before { top: 0; }
+.chart-plot::after { top: 50%; }
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 148px;
+}
+
+.bar-slot {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+}
+
+.bar {
+  width: 100%;
+  max-width: 46px;
+  height: var(--h);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: linear-gradient(to top, color-mix(in srgb, var(--accent) 55%, transparent), var(--accent));
+  transition: filter 0.12s ease;
+  /* Crecen al aparecer, escalonadas. Es la única animación y ocurre una vez. */
+  animation: crecer 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms);
+  transform-origin: bottom;
+}
+
+.bar-slot:hover .bar {
+  filter: brightness(1.15);
+}
+
+/* Un día sin ventas deja su hueco marcado, pero no compite con los que sí vendieron. */
+.bar-slot.vacio .bar {
+  background: var(--surface-2);
+  min-height: 3px;
+}
+
+.bar-value,
+.bar-label {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.bar-value {
+  margin-bottom: 4px;
+}
+
+.bar-label {
+  margin-top: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Con muchos días no caben las cifras encima de cada barra. */
+.bars:has(.bar-slot:nth-child(13)) .bar-value {
+  display: none;
+}
+
+@keyframes crecer {
+  from { transform: scaleY(0); opacity: 0.4; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+
+/* ── Dona (métodos de pago) ── */
+.chart-donut {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 22px;
+}
+
+.donut-wrap {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  flex: 0 0 auto;
+}
+
+.donut {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.donut-ring,
+.donut-seg {
+  fill: none;
+  stroke-width: 5.2;
+}
+
+.donut-ring {
+  stroke: var(--surface-2);
+}
+
+.donut-seg {
+  stroke: var(--tinte);
+  /* pathLength no hace falta: la circunferencia de r=15.9 es ~100, y los tramos se
+     escriben directamente como porcentajes. */
+  animation: aparecer 0.4s ease backwards;
+  animation-delay: calc(var(--tono, 0) * 60ms);
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.donut-center span {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.donut-center strong {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-legend {
+  flex: 1 1 180px;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart-legend li {
+  display: grid;
+  grid-template-columns: 9px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.chart-legend .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tinte);
+}
+
+.leyenda-nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leyenda-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.chart-legend strong {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes aparecer {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Barras horizontales (ranking de productos) ── */
+.rank {
+  display: grid;
+  gap: 9px;
+}
+
+.rank-row {
+  display: grid;
+  grid-template-columns: minmax(70px, 1.1fr) 2fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.rank-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-track {
+  height: 9px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.rank-bar {
+  display: block;
+  width: var(--w);
+  height: 100%;
+  border-radius: var(--radius);
+  background: var(--tinte, var(--accent));
+  animation: estirar 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 45ms);
+  transform-origin: left;
+}
+
+.rank-qty {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.rank-row:nth-child(1) .rank-bar { --tinte: var(--accent); }
+.rank-row:nth-child(2) .rank-bar { --tinte: color-mix(in srgb, var(--accent) 76%, var(--chart-fade)); }
+.rank-row:nth-child(3) .rank-bar { --tinte: color-mix(in srgb, var(--accent) 52%, var(--chart-fade)); }
+.rank-row:nth-child(4) .rank-bar { --tinte: color-mix(in srgb, var(--accent) 38%, var(--chart-fade)); }
+.rank-row:nth-child(5) .rank-bar { --tinte: color-mix(in srgb, var(--accent) 28%, var(--chart-fade)); }
+.rank-row:nth-child(n + 6) .rank-bar { --tinte: color-mix(in srgb, var(--accent) 20%, var(--chart-fade)); }
+
+@keyframes estirar {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ── Sin datos: el mismo gráfico, en gris ── */
+.chart-ghost .bar.ghost,
+.chart-ghost .rank-bar.ghost,
+.chart-ghost .donut-ring.ghost {
+  background: var(--surface-2);
+  stroke: var(--surface-2);
+  animation: respirar 3.4s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 160ms);
+}
+
+.chart-ghost .donut {
+  width: 132px;
+  height: 132px;
+  margin: 0 auto;
+  display: block;
+}
+
+.chart-ghost .donut-ring.ghost {
+  stroke-dasharray: 7 4;
+}
+
+.chart-ghost .rank.ghost .rank-row {
+  grid-template-columns: 1fr;
+}
+
+.chart-ghost .rank-bar.ghost {
+  width: var(--w);
+  height: 9px;
+  border-radius: var(--radius);
+}
+
+/* Un latido lento insinúa que ahí va a haber algo, sin llamar la atención. */
+@keyframes respirar {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.95; }
+}
+
+/* ── Tablas vacías con forma ── */
+.table-empty {
+  padding: 26px 24px;
+}
+
+.empty-block {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.empty-block .icon {
+  width: 26px;
+  height: 26px;
+  opacity: 0.35;
+}
+
+/* Quien pidió menos movimiento no quiere barras creciendo ni nada latiendo. */
+@media (prefers-reduced-motion: reduce) {
+  .bar,
+  .rank-bar,
+  .donut-seg,
+  .chart-ghost .bar.ghost,
+  .chart-ghost .rank-bar.ghost,
+  .chart-ghost .donut-ring.ghost {
+    animation: none;
+  }
+
+  .chart-ghost .bar.ghost,
+  .chart-ghost .rank-bar.ghost,
+  .chart-ghost .donut-ring.ghost {
+    opacity: 0.7;
+  }
+}

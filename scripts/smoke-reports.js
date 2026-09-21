@@ -57,6 +57,23 @@ electron.app.whenReady().then(async () => {
   check(/-\$1\.12/.test(porMetodo['Tarjeta crédito']?.[2]), `comisión de crédito al 4 %: ${JSON.stringify(porMetodo['Tarjeta crédito'])}`)
   check(/-\$1\.00/.test(porMetodo['Tarjeta débito']?.[2]), `comisión de débito al 2 %: ${JSON.stringify(porMetodo['Tarjeta débito'])}`)
   check(porMetodo['Efectivo']?.[2] === '—', 'el efectivo no debe mostrar comisión')
+
+  // ── Gráficos: cuentan lo mismo que las tablas, y deben cuadrar con ellas ──
+  const graficos = await run(`({
+    tramos: document.querySelectorAll('.donut-seg').length,
+    centro: document.querySelector('.donut-center strong').textContent,
+    leyenda: [...document.querySelectorAll('.chart-legend li')].map(l => l.querySelector('.leyenda-nombre').textContent),
+    barras: document.querySelectorAll('.chart-bars .bar').length,
+    conVenta: document.querySelectorAll('.chart-bars .bar-slot:not(.vacio)').length,
+    ranking: [...document.querySelectorAll('.chart-rank .rank-name')].map(n => n.textContent),
+    fantasmas: document.querySelectorAll('.chart-ghost').length
+  })`)
+  check(graficos.tramos === 3, `la dona tiene ${graficos.tramos} tramos, uno por método cobrado (3)`)
+  check(/\$154\.00/.test(graficos.centro), `el centro de la dona dice ${graficos.centro}, no el bruto`)
+  check(graficos.leyenda.includes('Efectivo'), `la leyenda no nombra los métodos: ${graficos.leyenda}`)
+  check(graficos.conVenta === 1, `hay ${graficos.conVenta} días con barra de venta, se esperaba 1 (hoy)`)
+  check(graficos.ranking[0] === 'Refresco cola 600ml', `el ranking no encabeza por el más vendido: ${graficos.ranking}`)
+  check(graficos.fantasmas === 0, 'con ventas no debe quedar ningún gráfico en gris')
   await shot('reportes')
 
   // ── Un rango sin ventas no debe romper la pantalla ──
@@ -66,7 +83,16 @@ electron.app.whenReady().then(async () => {
       f.dispatchEvent(new Event('change', { bubbles: true })) })()`)
   await setDate('#r-from', '2020-01-01')
   await setDate('#r-to', '2020-01-02')
-  await waitFor(`/Sin ventas en el periodo/.test(document.querySelector('#r-days').textContent)`, 'rango vacío muestra aviso')
+  await waitFor(`document.querySelectorAll('.chart-ghost').length === 3`, 'un rango vacío deja los tres gráficos en gris')
+  check(
+    await run(`[...document.querySelectorAll('#r-methods-table,#r-products-table,#r-days-table')].every(t => t.hidden)`),
+    'sin datos no debe quedar ninguna tabla vacía a la vista'
+  )
+  check(
+    await run(`/Sin ventas en el periodo/.test(document.querySelector('#r-sales').textContent)`),
+    'el detalle de ventas sí conserva su aviso: es una lista, no un agregado'
+  )
+  await shot('reportes-vacio')
   const vacias = await run(`[...document.querySelectorAll('.report-card strong')].map(s => s.textContent)`)
   check(vacias[0] === '0' && /\$0\.00/.test(vacias[1]), `las tarjetas no se reiniciaron: ${vacias.join(' | ')}`)
 

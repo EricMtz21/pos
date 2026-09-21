@@ -8,6 +8,7 @@ import { showTicket } from './ticket-modal.js'
 import { confirmModal } from '../components/modal.js'
 import { allowed } from '../session.js'
 import { formatMoney } from '../../shared/money.js'
+import { dayChart, methodDonut, productBars } from './report-charts.js'
 
 const escape = (s) =>
   String(s ?? '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c])
@@ -78,7 +79,8 @@ export async function renderReports(container) {
     <div class="report-grid">
       <section class="panel">
         <h3>Por método de pago</h3>
-        <div class="table-wrap"><table>
+        <div id="r-methods-chart"></div>
+        <div class="table-wrap" id="r-methods-table"><table>
           <thead><tr><th>Método</th><th class="num">Bruto</th><th class="num">Comisión</th><th class="num">Neto</th></tr></thead>
           <tbody id="r-methods"></tbody>
         </table></div>
@@ -86,7 +88,8 @@ export async function renderReports(container) {
 
       <section class="panel">
         <h3>Productos más vendidos</h3>
-        <div class="table-wrap"><table>
+        <div id="r-products-chart"></div>
+        <div class="table-wrap" id="r-products-table"><table>
           <thead><tr><th>Producto</th><th class="num">Unidades</th><th class="num">Importe</th></tr></thead>
           <tbody id="r-products"></tbody>
         </table></div>
@@ -94,7 +97,8 @@ export async function renderReports(container) {
 
       <section class="panel wide">
         <h3>Ventas por día</h3>
-        <div class="table-wrap"><table>
+        <div id="r-days-chart"></div>
+        <div class="table-wrap" id="r-days-table"><table>
           <thead><tr><th>Día</th><th class="num">Ventas</th><th class="num">Bruto</th><th class="num">Descuentos</th><th class="num">Comisión</th><th class="num">Neto</th></tr></thead>
           <tbody id="r-days"></tbody>
         </table></div>
@@ -128,7 +132,8 @@ export async function renderReports(container) {
   hydrateIcons(container)
 
   const $ = (sel) => container.querySelector(sel)
-  const empty = (cols, text) => `<tr><td colspan="${cols}" class="muted" style="padding:24px;text-align:center">${text}</td></tr>`
+  const empty = (cols, text, ic) => `<tr><td colspan="${cols}" class="table-empty">
+    <div class="empty-block">${icon(ic)}<span>${text}</span></div></td></tr>`
 
   function render() {
     const { summary, byMethod, byDay, topProducts, sales, cuts } = data
@@ -162,41 +167,43 @@ export async function renderReports(container) {
       </div>`
     hydrateIcons($('#r-cards'))
 
-    $('#r-methods').innerHTML = byMethod.length
-      ? byMethod
-          .map(
-            (m) => `<tr>
-              <td>${METHOD_LABELS[m.method] ?? escape(m.method)}</td>
-              <td class="num">${formatMoney(m.gross)}</td>
-              <td class="num muted">${m.commission ? `-${formatMoney(m.commission)}` : '—'}</td>
-              <td class="num"><strong>${formatMoney(m.net)}</strong></td>
-            </tr>`
-          )
-          .join('')
-      : empty(4, 'Sin cobros en el periodo.')
+    // Cada panel agregado se cuenta primero con un gráfico y luego con su tabla. Sin
+    // datos, la tabla sobra: el gráfico en gris ya dice qué va a aparecer ahí.
+    $('#r-methods-chart').innerHTML = methodDonut(byMethod, METHOD_LABELS)
+    $('#r-methods-table').hidden = byMethod.length === 0
+    $('#r-methods').innerHTML = byMethod
+      .map(
+        (m) => `<tr>
+          <td>${METHOD_LABELS[m.method] ?? escape(m.method)}</td>
+          <td class="num">${formatMoney(m.gross)}</td>
+          <td class="num muted">${m.commission ? `-${formatMoney(m.commission)}` : '—'}</td>
+          <td class="num"><strong>${formatMoney(m.net)}</strong></td>
+        </tr>`
+      )
+      .join('')
 
-    $('#r-products').innerHTML = topProducts.length
-      ? topProducts
-          .slice(0, 15)
-          .map(
-            (p) => `<tr><td>${escape(p.name)}</td><td class="num">${p.qty}</td><td class="num">${formatMoney(p.total)}</td></tr>`
-          )
-          .join('')
-      : empty(3, 'Sin productos vendidos.')
+    $('#r-products-chart').innerHTML = productBars(topProducts)
+    $('#r-products-table').hidden = topProducts.length === 0
+    $('#r-products').innerHTML = topProducts
+      .slice(0, 15)
+      .map(
+        (p) => `<tr><td>${escape(p.name)}</td><td class="num">${p.qty}</td><td class="num">${formatMoney(p.total)}</td></tr>`
+      )
+      .join('')
 
-    $('#r-days').innerHTML = byDay.length
-      ? byDay
-          .map(
-            (d) => `<tr>
-              <td>${d.day}</td><td class="num">${d.sales}</td>
-              <td class="num">${formatMoney(d.gross)}</td>
-              <td class="num muted">${d.discounts ? `-${formatMoney(d.discounts)}` : '—'}</td>
-              <td class="num muted">${d.commission ? `-${formatMoney(d.commission)}` : '—'}</td>
-              <td class="num"><strong>${formatMoney(d.net)}</strong></td>
-            </tr>`
-          )
-          .join('')
-      : empty(6, 'Sin ventas en el periodo.')
+    $('#r-days-chart').innerHTML = dayChart(byDay, { from, to })
+    $('#r-days-table').hidden = byDay.length === 0
+    $('#r-days').innerHTML = byDay
+      .map(
+        (d) => `<tr>
+          <td>${d.day}</td><td class="num">${d.sales}</td>
+          <td class="num">${formatMoney(d.gross)}</td>
+          <td class="num muted">${d.discounts ? `-${formatMoney(d.discounts)}` : '—'}</td>
+          <td class="num muted">${d.commission ? `-${formatMoney(d.commission)}` : '—'}</td>
+          <td class="num"><strong>${formatMoney(d.net)}</strong></td>
+        </tr>`
+      )
+      .join('')
 
     $('#r-sales').innerHTML = sales.length
       ? sales
@@ -225,7 +232,7 @@ export async function renderReports(container) {
             </tr>`
           )
           .join('')
-      : empty(8, folio ? `Ninguna venta con folio «${escape(folio)}».` : 'Sin ventas en el periodo.')
+      : empty(8, folio ? `Ninguna venta con folio «${escape(folio)}».` : 'Sin ventas en el periodo.', 'shopping-cart')
     hydrateIcons($('#r-sales'))
 
     $('#r-cuts').innerHTML = cuts.length
@@ -244,7 +251,8 @@ export async function renderReports(container) {
             </tr>`
           )
           .join('')
-      : empty(7, 'Todavía no hay cortes registrados.')
+      : empty(7, 'Todavía no hay cortes registrados.', 'wallet')
+    hydrateIcons($('#r-cuts'))
   }
 
   async function refresh() {
