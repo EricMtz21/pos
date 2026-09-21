@@ -1,18 +1,58 @@
 import { icon, hydrateIcons } from '../icons.js'
 import { register, kbd } from '../shortcuts/index.js'
+import { onScan } from '../scanner.js'
 import { toast } from '../components/toast.js'
 import { confirmModal } from '../components/modal.js'
 import { openPayment } from './payment.js'
 import { showTicket } from './ticket-modal.js'
+import { openDiscount, openLinePrice } from './sale-dialogs.js'
 import { calculateTotals } from '../../shared/business/totals.js'
 import { formatMoney } from '../../shared/money.js'
 
 const escape = (s) =>
   String(s ?? '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c])
 
+// Anchos de barra fijos (no aleatorios: el dibujo no debe bailar en cada repintado).
+// Índices pares = barra, impares = espacio, como un código real.
+const PATRON = [3, 1, 2, 1, 1, 2, 3, 1, 1, 3, 2, 1, 1, 2, 2, 3, 1, 1, 3, 2, 1, 1, 2, 1, 3, 2, 1, 3, 1, 1, 2, 2]
+
+function barcodeSvg(alto = 30) {
+  const unidad = 2.4
+  let x = 0
+  const barras = PATRON.map((ancho, i) => {
+    const rect = i % 2 === 0 ? `<rect x="${x.toFixed(1)}" y="0" width="${(ancho * unidad).toFixed(1)}" height="${alto}" rx="0.5"/>` : ''
+    x += ancho * unidad
+    return rect
+  }).join('')
+  return `<svg class="barcode" viewBox="0 0 ${x.toFixed(1)} ${alto}" preserveAspectRatio="none" aria-hidden="true">${barras}</svg>`
+}
+
+/**
+ * Estado del carrito vacío. Una pila de tickets con su código de barras dice de qué va
+ * esta pantalla mejor que una línea de texto, y es lo que el lector realmente escanea.
+ */
+const CARRITO_VACIO = `
+  <div class="cart-empty">
+    <div class="receipt-stack" aria-hidden="true">
+      <div class="receipt receipt-back-2"></div>
+      <div class="receipt receipt-back-1"></div>
+      <div class="receipt receipt-front">
+        <span class="receipt-line w-70"></span>
+        <span class="receipt-line w-45"></span>
+        ${barcodeSvg()}
+        <span class="receipt-perf"></span>
+        <span class="receipt-line w-55"></span>
+      </div>
+      <span class="scan-sweep"></span>
+    </div>
+    <p class="cart-empty-title">Listo para vender</p>
+    <p class="hint">Escanea un código con el lector, o escribe el nombre arriba.</p>
+  </div>`
+
 export async function renderSales(container) {
   /** @type {{productId, name, unit, qty, unitPrice, taxRate, stock}[]} */
   let cart = []
+  let discount = 0 // descuento de la venta, en centavos
   let selected = 0 // índice de la línea seleccionada del carrito
   let results = [] // resultados de la búsqueda en vivo
   let highlighted = 0 // índice resaltado dentro de los resultados
@@ -40,29 +80,38 @@ export async function renderSales(container) {
         <div class="totals-row"><span>Artículos</span><span id="t-count">0</span></div>
         <div class="totals-row"><span>Subtotal</span><span id="t-subtotal">${formatMoney(0)}</span></div>
         <div class="totals-row"><span>IVA incluido</span><span id="t-tax">${formatMoney(0)}</span></div>
-        <div class="totals-row grand"><span>Total</span><strong id="t-total">${formatMoney(0)}</strong></div>
-        <button class="btn primary" id="btn-pay" disabled>Cobrar ${kbd('F12')}</button>
-        <button class="btn ghost" id="btn-clear" disabled>Cancelar venta ${kbd('F8')}</button>
-        <button class="btn ghost" id="btn-reprint">Último ticket ${kbd('Ctrl+P')}</button>
+        <button class="totals-row as-link" id="btn-discount" type="button" disabled>
+          <span>Descuento</span><span id="t-discount">${formatMoney(0)} ${kbd('F7')}</span>
+        </button>
+        <div class="totals-foot">
+          <div class="totals-row grand"><span>Total</span><strong id="t-total">${formatMoney(0)}</strong></div>
+          <button class="btn primary" id="btn-pay" disabled>Cobrar ${kbd('F12')}</button>
+          <button class="btn ghost" id="btn-clear" disabled>Cancelar venta ${kbd('F8')}</button>
+          <button class="btn ghost" id="btn-reprint">Último ticket ${kbd('Ctrl+P')}</button>
+        </div>
       </aside>
     </div>`
   hydrateIcons(container)
 
   const scan = container.querySelector('#scan')
   const resultsBox = container.querySelector('#results')
+  const cartWrap = container.querySelector('.cart-wrap')
   const cartBody = container.querySelector('#cart')
   const payBtn = container.querySelector('#btn-pay')
   const clearBtn = container.querySelector('#btn-clear')
+  const discountBtn = container.querySelector('#btn-discount')
 
   // ── Carrito ────────────────────────────────────────────────────────────────
 
-  const totals = () => calculateTotals(cart.map((l) => ({ ...l })))
+  const totals = () => calculateTotals(cart.map((l) => ({ ...l })), { discount })
 
   function renderCart() {
     if (cart.length === 0) {
-      cartBody.innerHTML = `<tr><td colspan="5" class="muted" style="padding:44px;text-align:center">
-        Escanea un producto o escríbelo arriba para empezar.</td></tr>`
+      // Sin líneas, el encabezado de la tabla sobra: estorba al estado vacío.
+      cartWrap.classList.add('is-empty')
+      cartBody.innerHTML = `<tr><td colspan="5">${CARRITO_VACIO}</td></tr>`
     } else {
+      cartWrap.classList.remove('is-empty')
       selected = Math.min(selected, cart.length - 1)
       cartBody.innerHTML = cart
         .map((line, i) => {
@@ -72,7 +121,10 @@ export async function renderSales(container) {
               ${escape(line.name)}
               ${excede ? `<div class="stock-warn">Supera el stock (${line.stock})</div>` : ''}
             </td>
-            <td class="num muted">${formatMoney(line.unitPrice)}</td>
+            <td class="num">
+              <button class="btn ghost price-btn ${line.unitPrice !== line.listPrice ? 'is-custom' : ''}"
+                      data-act="price" title="Cambiar el precio de esta línea">${formatMoney(line.unitPrice)}</button>
+            </td>
             <td class="num">
               <span class="qty-control">
                 <button class="btn ghost" data-act="dec" aria-label="Quitar uno">${icon('minus')}</button>
@@ -94,7 +146,10 @@ export async function renderSales(container) {
     container.querySelector('#t-count').textContent = cart.reduce((s, l) => s + l.qty, 0)
     container.querySelector('#t-subtotal').textContent = formatMoney(t.subtotal)
     container.querySelector('#t-tax').textContent = formatMoney(t.tax)
+    container.querySelector('#t-discount').innerHTML = `${t.discount ? `-${formatMoney(t.discount)}` : formatMoney(0)} ${kbd('F7')}`
     container.querySelector('#t-total').textContent = formatMoney(t.total)
+    discountBtn.disabled = cart.length === 0
+    discountBtn.classList.toggle('is-set', t.discount > 0)
     payBtn.disabled = cart.length === 0
     clearBtn.disabled = cart.length === 0
   }
@@ -108,6 +163,7 @@ export async function renderSales(container) {
         name: product.name,
         qty,
         unitPrice: product.price_gross,
+        listPrice: product.price_gross, // para poder volver al precio de lista
         taxRate: product.tax_rate,
         stock: product.stock
       })
@@ -143,6 +199,7 @@ export async function renderSales(container) {
     })
     if (!ok) return
     cart = []
+    discount = 0
     renderCart()
     scan.focus()
   }
@@ -248,27 +305,52 @@ export async function renderSales(container) {
     if (act === 'inc') changeQty(i, 1)
     else if (act === 'dec') changeQty(i, -1)
     else if (act === 'del') removeLine(i)
+    else if (act === 'price') cambiarPrecio(i)
     else {
       selected = i
       renderCart()
     }
   })
 
+  async function cambiarPrecio(i) {
+    const line = cart[i]
+    if (!line) return
+    const precio = await openLinePrice(line)
+    if (precio === null) return
+    line.unitPrice = precio
+    selected = i
+    // Un precio a mano puede dejar el descuento por encima del nuevo subtotal.
+    discount = Math.min(discount, totals().subtotal)
+    renderCart()
+  }
+
+  async function aplicarDescuento() {
+    if (cart.length === 0) return
+    const subtotal = calculateTotals(cart.map((l) => ({ ...l }))).subtotal
+    const valor = await openDiscount({ subtotal, actual: discount })
+    if (valor === null) return
+    discount = valor
+    renderCart()
+    scan.focus()
+  }
+
   // ── Cobro ──────────────────────────────────────────────────────────────────
 
   async function charge() {
     if (cart.length === 0) return
     const t = totals()
-    const result = await openPayment({ total: t.total })
+    const result = await openPayment({ total: t.total, subtotal: t.subtotal, discount: t.discount })
     if (!result) return
 
     try {
       const sale = await window.api.sales.create({
         items: cart.map((l) => ({ productId: l.productId, qty: l.qty, unitPrice: l.unitPrice })),
         payments: result.payments,
+        discount,
         cashReceived: result.cashReceived
       })
       cart = []
+      discount = 0
       renderCart()
       toast(`Venta ${sale.folio} · ${formatMoney(sale.total)}`)
       await showTicket(sale, { highlightChange: true })
@@ -294,13 +376,26 @@ export async function renderSales(container) {
   payBtn.addEventListener('click', charge)
   clearBtn.addEventListener('click', clearSale)
   container.querySelector('#btn-reprint').addEventListener('click', reprint)
+  discountBtn.addEventListener('click', aplicarDescuento)
 
   renderCart()
   scan.focus()
 
   const disposers = [
+    // Escanear en esta pantalla es vender: va al carrito sin importar dónde esté el foco.
+    onScan(async (code) => {
+      const producto = await window.api.products.findByCode(code)
+      if (producto) {
+        scan.value = ''
+        closeResults()
+        return addProduct(producto)
+      }
+      toast(`Sin producto con el código ${code}`, 'error')
+    }),
     register('F2', () => (scan.focus(), scan.select()), 'Nueva venta / enfocar escáner'),
     register('F3', () => (scan.focus(), scan.select()), 'Buscar producto'),
+    register('F4', charge, 'Elegir método de pago y cobrar'),
+    register('F7', aplicarDescuento, 'Descuento de la venta'),
     register('F12', charge, 'Cobrar'),
     register('F8', clearSale, 'Cancelar venta actual'),
     register('Ctrl+P', reprint, 'Reimprimir último ticket'),

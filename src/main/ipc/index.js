@@ -1,7 +1,8 @@
 import { ipcMain, BrowserWindow, app, dialog, shell } from 'electron'
 import { copyFileSync } from 'node:fs'
 import { renderTicket, sampleSale } from '../../shared/business/ticket.js'
-import { printTicket, saveTicketPdf } from '../ticket-print.js'
+import { printTicket, saveTicketPdf, listPrinters } from '../ticket-print.js'
+import { openDrawer } from '../cash-drawer.js'
 import { writeReport, reportFileName } from '../export-excel.js'
 import { listBackups, restoreDatabase, inspectDatabaseFile, importLogo } from '../data-files.js'
 import { can, deniedForCashier } from '../../shared/business/permissions.js'
@@ -88,8 +89,30 @@ export function registerIpc({ repos, appInfo, backup, data, updater }) {
   // Opciones de ticket vigentes, para imprimir y para la vista previa.
   const ticketOptions = () => {
     const all = settings.getAll()
-    return { business: all.business, width: all.ticket.width }
+    return { business: all.business, width: all.ticket.width, printer: all.ticket.printer }
   }
+
+  // Destino del pulso del cajón: el suyo propio si se configuró uno, si no la impresora
+  // del ticket, que es de donde cuelga el cable en la inmensa mayoría de mostradores.
+  const drawerOptions = () => {
+    const { cashDrawer, ticket } = settings.getAll()
+    return { ...cashDrawer, target: cashDrawer.target || ticket.printer }
+  }
+
+  /**
+   * Abre el cajón sin que un fallo estropee la venta: el dinero ya se cobró y el ticket
+   * ya salió. Si el cable está flojo se avisa en pantalla y el cajón se abre con la llave.
+   */
+  function openDrawerQuietly(sender) {
+    const opciones = drawerOptions()
+    if (!opciones.enabled || !opciones.target) return
+    openDrawer(opciones).catch((err) => {
+      console.error('cajón:', err)
+      sender.send('drawer:failed', err.message)
+    })
+  }
+
+  handle('drawer:open', () => openDrawer(drawerOptions()))
 
   handle('app:info', () => appInfo)
 
@@ -106,7 +129,13 @@ export function registerIpc({ repos, appInfo, backup, data, updater }) {
   handle('products:moves', (id, limit) => products.moves(id, limit))
   handle('products:history', (id) => repos.audit.list({ entity: 'product', entityId: id, limit: 50 }))
 
-  handle('sales:create', (payload) => sales.create({ ...payload, userId: currentUserId() }))
+  handle('sales:create', (payload, event) => {
+    const sale = sales.create({ ...payload, userId: currentUserId() })
+    // Solo con efectivo de por medio: en una venta con tarjeta no hay que dar cambio,
+    // y abrir el cajón sin motivo lo deja expuesto.
+    if (sale.payments?.some((p) => p.method === 'cash')) openDrawerQuietly(event.sender)
+    return sale
+  })
   handle('sales:get', (id) => sales.get(id))
   handle('sales:last', () => sales.last())
   handle('sales:list', (filters) => sales.list(filters))
@@ -127,6 +156,9 @@ export function registerIpc({ repos, appInfo, backup, data, updater }) {
 
   /** Vista previa con datos de ejemplo, para ver el formato desde Ajustes. */
   handle('ticket:previewSample', () => renderTicket(sampleSale(), ticketOptions()))
+
+  /** Ticket de ejemplo impreso de verdad, para calibrar la impresora sin cobrar nada. */
+  handle('ticket:printSample', () => printTicket(sampleSale(), ticketOptions()))
 
   handle('ticket:print', (saleId) => {
     const sale = sales.get(saleId)
@@ -168,7 +200,8 @@ export function registerIpc({ repos, appInfo, backup, data, updater }) {
   handle('cashCuts:list', (limit) => cashCuts.list(limit))
 
   // ── Datos: respaldo, restauración y logo ──
-  handle('data:info', () => ({ ...data.paths, printers: [] }))
+  handle('data:info', () => data.paths)
+  handle('printers:list', () => listPrinters())
 
   handle('backup:list', () => listBackups(data.paths.backupDir))
 

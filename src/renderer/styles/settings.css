@@ -132,11 +132,13 @@
 }
 
 /* ── Editor de tramos ────────────────────────────────────── */
-.commission-body {
+.commission-body,
+.drawer-body {
   margin-top: 16px;
 }
 
-.commission-body.disabled {
+.commission-body.disabled,
+.drawer-body.disabled {
   opacity: 0.45;
   pointer-events: none;
 }

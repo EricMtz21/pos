@@ -68,6 +68,34 @@ electron.app.whenReady().then(async () => {
   await run(`(() => { const s = document.querySelector('#scan'); s.value = ''; s.dispatchEvent(new Event('input', { bubbles: true })) })()`)
   await sleep(200)
 
+  // ── El lector funciona con el foco fuera de la caja ─────
+  // Teclas muy seguidas + Enter: así escribe un lector, y así se distingue de una persona.
+  await run(`(() => {
+    document.querySelector('#btn-reprint').focus()
+    for (const ch of '7501000444444') window.dispatchEvent(new KeyboardEvent('keydown', { key: ch, bubbles: true }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  })()`)
+  await waitFor(`document.querySelectorAll('.cart-row').length === 3`, 'el escaneo entra con el foco en un botón')
+  await run(`document.querySelector('#scan').dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }))`)
+  await waitFor(`document.querySelectorAll('.cart-row').length === 2`, 'se quita lo escaneado de prueba')
+
+  // ── Precio de línea y descuento ─────────────────────────
+  await run(`document.querySelector('[data-act="price"]').click()`)
+  await waitFor(`document.querySelector('#price-form')`, 'se abre el precio de línea')
+  await run(`(() => { const f = document.querySelector('#price-form'); f.price.value = '20'
+    f.price.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  await run(`document.querySelector('[form="price-form"]').click()`)
+  await waitFor(`document.querySelector('.price-btn.is-custom')`, 'el precio a mano se marca')
+  // 2 refrescos a $20 + 1 arroz de $28 = $68.00
+  check(/68\.00/.test(await run(`document.querySelector('#t-total').textContent`)), 'el total no tomó el precio a mano')
+
+  await key('F7')
+  await waitFor(`document.querySelector('#disc-form')`, 'F7 abre el descuento')
+  await run(`(() => { const f = document.querySelector('#disc-form'); f.amount.value = '8'
+    f.amount.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  await run(`document.querySelector('[form="disc-form"]').click()`)
+  await waitFor(`document.querySelector('#t-total').textContent.includes('60.00')`, 'el descuento llega al total')
+
   // ── Cobro en efectivo (F12) ─────────────────────────────
   await key('F12')
   await waitFor(`document.querySelector('#pay-amount')`, 'F12 abre el cobro')
@@ -76,14 +104,14 @@ electron.app.whenReady().then(async () => {
     change: document.querySelector('.change-box strong').textContent,
     label: document.querySelector('.change-box span').textContent
   })`)
-  check(/64\.00/.test(pay.total), `el cobro muestra ${pay.total}`)
+  check(/60\.00/.test(pay.total), `el cobro muestra ${pay.total}`)
   check(/0\.00/.test(pay.change) && pay.label === 'Cambio', `arranca en exacto: ${pay.label} ${pay.change}`)
 
   // Billete de $100 → cambio de $36
   await run(`document.querySelector('[data-cash="10000"]').click()`)
   await sleep(350)
   const change = await run(`document.querySelector('.change-box strong').textContent`)
-  check(/36\.00/.test(change), `cambio incorrecto: ${change} (esperado $36.00)`)
+  check(/40\.00/.test(change), `cambio incorrecto: ${change} (esperado $40.00)`)
   await shot('cobro')
 
   await run(`document.querySelector('#pay-confirm').click()`)
@@ -99,9 +127,9 @@ electron.app.whenReady().then(async () => {
   })`)
   check(ticket.open, 'no se mostró el ticket tras cobrar')
   check(/^Ticket V\d{8}-0001$/.test(ticket.title), `folio inesperado: ${ticket.title}`)
-  check(/TOTAL\s+\$64\.00/.test(ticket.text), 'el ticket no cuadra con el total')
-  check(/Cambio\s+\$36\.00/.test(ticket.text), 'el ticket no muestra el cambio')
-  check(/IVA incluido\s+\$4\.97/.test(ticket.text), 'el ticket no desglosa el IVA')
+  check(/TOTAL\s+\$60\.00/.test(ticket.text), 'el ticket no cuadra con el total')
+  check(/Descuento\s+-\$8\.00/.test(ticket.text), 'el ticket no muestra el descuento')
+  check(/Cambio\s+\$40\.00/.test(ticket.text), 'el ticket no muestra el cambio')
   check(ticket.cartRows === 0, 'el carrito no se vació tras cobrar')
   check(/\$0\.00/.test(ticket.total), 'los totales no se reiniciaron')
   const maxLen = await run(`Math.max(...document.querySelector('#ticket-text').textContent.split('\\n').map(l => l.length))`)

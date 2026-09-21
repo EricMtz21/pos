@@ -9,16 +9,21 @@ archivo local que puedes respaldar copiando y pegar.
 ## Características
 
 - **Venta en segundos.** Escaneas, cobras, imprimes: `F2` → escanear → `F12` → cobrar.
-  El lector de código de barras USB funciona sin instalar nada.
+  El lector de código de barras USB funciona sin instalar nada y en cualquier pantalla:
+  no hace falta tener el cursor puesto en la caja de búsqueda.
 - **Funciona sin internet.** Toda la operación es local; no hay servidor ni cuenta que crear.
-- **Inventario** con precios, costos, márgenes, categorías y alertas de stock bajo.
+- **Inventario** con precios, costos, márgenes y alertas de stock bajo.
+- **Descuentos** sobre la venta, en pesos o en porcentaje, y **precio a mano** por línea
+  para vender a granel o hacer un precio especial.
 - **Métodos de pago:** efectivo (con cálculo de cambio), débito, crédito, transferencia y
   pago mixto.
 - **Comisiones de tarjeta configurables por tramos**, con el porcentaje que baja según el
   volumen acumulado del mes. Al cobrar ves cuánto recibe realmente el negocio.
-- **Ticket** para impresora térmica de 58 u 80 mm, o exportado a PDF.
+- **Ticket** para impresora térmica de 58 u 80 mm, o exportado a PDF. Con una impresora
+  fija sale directo, sin diálogo de Windows en cada venta.
+- **Cajón de dinero:** se abre solo al cobrar en efectivo, a través de la impresora.
 - **Reportes por rango de fechas** con desglose por método de pago, productos más vendidos
-  y exportación a Excel.
+  y exportación a Excel. También se busca una venta por folio, sin acertar la fecha.
 - **Corte de caja** con arqueo: compara lo que debería haber en el cajón contra lo que
   contaste y registra la diferencia.
 - **Devoluciones y cancelaciones**, con reposición automática de stock.
@@ -52,6 +57,8 @@ Cada botón muestra su atajo. `F1` abre la lista completa desde cualquier pantal
 | `F1` | Ayuda: lista de atajos |
 | `F2` | Nueva venta / enfocar el escáner |
 | `F3` | Buscar producto |
+| `F4` | Elegir método de pago y cobrar |
+| `F7` | Descuento de la venta |
 | `F8` | Cancelar la venta en curso |
 | `F12` | Cobrar |
 | `Ctrl+N` | Nuevo producto |
@@ -62,6 +69,7 @@ Cada botón muestra su atajo. `F1` abre la lista completa desde cualquier pantal
 | `Ctrl+E` | Exportar el reporte a Excel |
 | `Ctrl+,` | Ir a Ajustes |
 | `Ctrl+D` | Alternar modo claro/oscuro |
+| `Ctrl+L` | Bloquear la caja |
 | `+` / `-` | Cambiar la cantidad del artículo seleccionado |
 | `Supr` | Quitar el artículo del carrito |
 | `Esc` | Cerrar o cancelar |
@@ -98,6 +106,11 @@ Los datos del negocio y el logo van al ticket. Las comisiones de tarjeta se conf
 por tramos: defines desde qué volumen acumulado baja el porcentaje, y el editor avisa
 si los tramos no son coherentes. Nada se guarda sin validarse: el proceso principal
 revisa la configuración aunque la pantalla la deje pasar.
+
+También se elige la impresora del ticket y se imprime uno de prueba para calibrarla sin
+cobrar nada. Si tienes cajón de dinero, se configura aquí: no se conecta a la computadora
+sino a la impresora, y se abre solo cuando la venta lleva efectivo. El botón «Probar el
+cajón» manda el pulso para comprobar el cable antes de abrir el negocio.
 
 Desde aquí también puedes respaldar la base, guardar una copia para llevártela a otra
 computadora o restaurar desde un respaldo. Antes de restaurar se comprueba que el
@@ -223,9 +236,9 @@ proceso principal siempre recalcula al guardar: nunca confía en lo que le manda
 
 ## Estado
 
-Funcionando: ventas, inventario, comisiones de tarjeta, ticket e impresión, reportes
-con exportación a Excel, corte de caja, ajustes, respaldos, devoluciones,
-cancelaciones, historial y roles de usuario.
+Funcionando: ventas, descuentos, inventario, comisiones de tarjeta, ticket e impresión,
+cajón de dinero, reportes con exportación a Excel, corte de caja, ajustes, respaldos,
+devoluciones, cancelaciones, historial y roles de usuario.
 
 En camino: personalización de atajos.
 

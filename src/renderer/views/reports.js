@@ -42,26 +42,39 @@ const PRESETS = {
 
 export async function renderReports(container) {
   let [from, to] = PRESETS.hoy()
+  let folio = ''
   let data = null
 
   container.innerHTML = `
-    <div class="toolbar">
-      <label class="field inline"><span>Desde</span><input type="date" id="r-from" value="${from}" /></label>
-      <label class="field inline"><span>Hasta</span><input type="date" id="r-to" value="${to}" /></label>
-      <div class="presets">
-        <button class="btn" data-preset="hoy" type="button">Hoy</button>
-        <button class="btn" data-preset="semana" type="button">7 días</button>
-        <button class="btn" data-preset="mes" type="button">Este mes</button>
-        <button class="btn" data-preset="anterior" type="button">Mes pasado</button>
+    <div class="report-bar">
+      <div class="report-period">
+        <span class="group-label">Periodo</span>
+        <div class="period-controls">
+          <input type="date" id="r-from" value="${from}" aria-label="Desde" />
+          <span class="muted">a</span>
+          <input type="date" id="r-to" value="${to}" aria-label="Hasta" />
+          <div class="presets">
+            <button class="btn" data-preset="hoy" type="button">Hoy</button>
+            <button class="btn" data-preset="semana" type="button">7 días</button>
+            <button class="btn" data-preset="mes" type="button">Este mes</button>
+            <button class="btn" data-preset="anterior" type="button">Mes pasado</button>
+          </div>
+        </div>
       </div>
-      <span class="spacer"></span>
-      <button class="btn" id="r-audit" type="button">${icon('info')}Actividad</button>
-      <button class="btn" id="r-cut" type="button">${icon('wallet')}Corte de caja ${kbd('Ctrl+B')}</button>
-      <button class="btn primary" id="r-export" type="button">${icon('download')}Exportar a Excel</button>
+
+      <div class="report-actions">
+        <span class="group-label">Acciones</span>
+        <div class="button-row">
+          <button class="btn" id="r-audit" type="button">${icon('info')}Actividad</button>
+          <button class="btn" id="r-cut" type="button">${icon('wallet')}Corte de caja ${kbd('Ctrl+B')}</button>
+          <button class="btn primary" id="r-export" type="button">${icon('download')}Exportar a Excel</button>
+        </div>
+      </div>
     </div>
 
     <div class="report-cards" id="r-cards"></div>
 
+    <h2 class="report-section">Cómo se vendió</h2>
     <div class="report-grid">
       <section class="panel">
         <h3>Por método de pago</h3>
@@ -87,10 +100,19 @@ export async function renderReports(container) {
         </table></div>
       </section>
 
+    </div>
+
+    <h2 class="report-section">Movimientos</h2>
+    <div class="report-grid">
       <section class="panel wide">
         <h3>Detalle de ventas</h3>
+        <div class="search" style="margin-bottom:12px;max-width:340px">
+          ${icon('search')}
+          <input id="r-folio" type="search" autocomplete="off"
+                 placeholder="Buscar por folio (ignora el rango de fechas)…" aria-label="Buscar venta por folio" />
+        </div>
         <div class="table-wrap"><table>
-          <thead><tr><th>Folio</th><th>Hora</th><th class="num">Artículos</th><th>Método</th><th class="num">Total</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>Folio</th><th>Hora</th><th>Cajero</th><th class="num">Artículos</th><th>Método</th><th class="num">Total</th><th>Estado</th><th></th></tr></thead>
           <tbody id="r-sales"></tbody>
         </table></div>
       </section>
@@ -111,20 +133,33 @@ export async function renderReports(container) {
   function render() {
     const { summary, byMethod, byDay, topProducts, sales, cuts } = data
 
-    $('#r-cards').innerHTML = [
-      ['Ventas', summary.sales, 'shopping-cart'],
-      ['Venta bruta', formatMoney(summary.gross), 'banknote'],
-      ['Comisiones', summary.commission ? `-${formatMoney(summary.commission)}` : formatMoney(0), 'credit-card'],
-      ['Devoluciones', summary.returns ? `-${formatMoney(summary.returns)}` : formatMoney(0), 'refresh-cw'],
-      ['Venta neta', formatMoney(summary.net), 'wallet'],
-      ['Ticket promedio', formatMoney(summary.averageTicket), 'chart-column']
-    ]
-      .map(
-        ([label, value, ic]) => `<div class="report-card">
-          ${icon(ic)}<span class="label">${label}</span><strong>${value}</strong>
-        </div>`
-      )
-      .join('')
+    // Dos bloques que cuentan la misma historia que el dinero: lo que se vendió,
+    // y lo que queda después de restar comisiones y devoluciones.
+    const card = ([label, value, ic, extra = '']) => `<div class="report-card ${extra}">
+      <span class="label">${label}</span><strong>${value}</strong>${icon(ic)}
+    </div>`
+
+    $('#r-cards').innerHTML = `
+      <div class="card-group">
+        <span class="group-label">Vendido</span>
+        <div class="card-row">
+          ${[
+            ['Ventas', summary.sales, 'shopping-cart'],
+            ['Venta bruta', formatMoney(summary.gross), 'banknote'],
+            ['Ticket promedio', formatMoney(summary.averageTicket), 'chart-column']
+          ].map(card).join('')}
+        </div>
+      </div>
+      <div class="card-group">
+        <span class="group-label">Recibido</span>
+        <div class="card-row">
+          ${[
+            ['Comisiones', summary.commission ? `-${formatMoney(summary.commission)}` : formatMoney(0), 'credit-card'],
+            ['Devoluciones', summary.returns ? `-${formatMoney(summary.returns)}` : formatMoney(0), 'refresh-cw'],
+            ['Venta neta', formatMoney(summary.net), 'wallet', 'is-net']
+          ].map(card).join('')}
+        </div>
+      </div>`
     hydrateIcons($('#r-cards'))
 
     $('#r-methods').innerHTML = byMethod.length
@@ -169,6 +204,7 @@ export async function renderReports(container) {
             (s) => `<tr data-sale="${s.id}" class="${s.status === 'cancelled' ? 'cancelled' : ''}">
               <td>${escape(s.folio)}</td>
               <td class="muted">${s.created_at.slice(11, 16)}</td>
+              <td class="muted">${escape(s.user_name) || '—'}</td>
               <td class="num">${s.items}</td>
               <td class="muted">${METHOD_LABELS[s.payment_method] ?? escape(s.payment_method)}</td>
               <td class="num"><strong>${formatMoney(s.total)}</strong></td>
@@ -189,7 +225,7 @@ export async function renderReports(container) {
             </tr>`
           )
           .join('')
-      : empty(7, 'Sin ventas en el periodo.')
+      : empty(8, folio ? `Ninguna venta con folio «${escape(folio)}».` : 'Sin ventas en el periodo.')
     hydrateIcons($('#r-sales'))
 
     $('#r-cuts').innerHTML = cuts.length
@@ -213,7 +249,7 @@ export async function renderReports(container) {
 
   async function refresh() {
     try {
-      data = await window.api.reports.get({ from, to })
+      data = await window.api.reports.get({ from, to, folio })
       render()
     } catch (err) {
       toast(err.message, 'error')
@@ -291,6 +327,14 @@ export async function renderReports(container) {
     )
     await refresh()
   }
+
+  // Buscar un folio concreto no debe disparar una consulta por tecla.
+  let folioTimer
+  $('#r-folio').addEventListener('input', (e) => {
+    clearTimeout(folioTimer)
+    folio = e.target.value.trim()
+    folioTimer = setTimeout(refresh, 160)
+  })
 
   $('#r-export').addEventListener('click', exportExcel)
   $('#r-cut').addEventListener('click', cashCut)

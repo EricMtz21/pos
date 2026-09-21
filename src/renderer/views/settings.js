@@ -64,10 +64,43 @@ export async function renderSettings(container) {
               <option value="58"${settings.ticket.width === 58 ? ' selected' : ''}>58 mm (32 caracteres)</option>
               <option value="80"${settings.ticket.width === 80 ? ' selected' : ''}>80 mm (48 caracteres)</option>
             </select></label>
-          <div class="field"><span>Al cobrar</span>
-            <label class="switch"><input type="checkbox" name="autoPrint" ${settings.ticket.autoPrint ? 'checked' : ''} />
-              <span>Abrir el diálogo de impresión automáticamente</span></label></div>
+          <label class="field"><span>Impresora</span>
+            <select name="printer" id="s-printer"><option value="">Cargando…</option></select>
+            <span class="hint">Con una impresora elegida el ticket sale directo. Sin elegir,
+              se abre el diálogo de Windows en cada venta.</span></label>
         </form>
+
+        <div class="button-row" style="margin-top:14px">
+          <button class="btn" type="button" id="s-test-print">${icon('printer')}Imprimir ticket de prueba</button>
+        </div>
+
+        <div class="setting-row" style="margin-top:18px">
+          <label class="switch">
+            <input type="checkbox" id="s-drawer-enabled" ${settings.cashDrawer.enabled ? ' checked' : ''} />
+            <span>Abrir el cajón al cobrar en efectivo</span>
+          </label>
+          <p class="hint">El cajón no se conecta a la computadora: cuelga de la impresora por un
+            cable telefónico, y se abre con un pulso que se manda a través de ella.</p>
+        </div>
+
+        <div class="drawer-body ${settings.cashDrawer.enabled ? '' : 'disabled'}" id="s-drawer-body">
+          <form class="form-grid" id="s-drawer">
+            <label class="field"><span>El cajón cuelga de</span>
+              <select name="target" id="s-drawer-target"><option value="">Cargando…</option></select>
+              <span class="hint">Normalmente la misma impresora del ticket. Con la impresora
+                conectada por cable serie o paralelo, elige el puerto.</span></label>
+            <label class="field"><span>Patilla del conector</span>
+              <select name="pin">
+                <option value="0"${settings.cashDrawer.pin === 0 ? ' selected' : ''}>2 (lo habitual)</option>
+                <option value="1"${settings.cashDrawer.pin === 1 ? ' selected' : ''}>5</option>
+              </select>
+              <span class="hint">Si el cajón no responde con una, prueba la otra: depende del
+                fabricante.</span></label>
+          </form>
+          <div class="button-row" style="margin-top:14px">
+            <button class="btn" type="button" id="s-test-drawer">${icon('wallet')}Probar el cajón</button>
+          </div>
+        </div>
 
         <div class="field" style="margin-top:18px">
           <span>Vista previa</span>
@@ -215,12 +248,84 @@ export async function renderSettings(container) {
   }))
 
   autosave($('#s-ticket'), (f) => ({
-    ticket: { ...settings.ticket, width: Number(f.width.value), autoPrint: f.autoPrint.checked }
+    ticket: { ...settings.ticket, width: Number(f.width.value), printer: f.printer.value }
   }))
 
   autosave($('#s-inventory'), (f) => ({ lowStockThreshold: Number(f.lowStockThreshold.value) }))
 
   await paintTicketPreview()
+
+  // ── Impresora: se listan las del sistema ──
+  let impresoras = []
+  try {
+    impresoras = await window.api.data.printers()
+    $('#s-printer').innerHTML =
+      `<option value="">Preguntar en cada venta</option>` +
+      impresoras
+        .map(
+          (i) => `<option value="${escape(i.name)}"${i.name === settings.ticket.printer ? ' selected' : ''}>
+            ${escape(i.name)}${i.default ? ' (predeterminada)' : ''}</option>`
+        )
+        .join('')
+  } catch (err) {
+    $('#s-printer').innerHTML = `<option value="">No se pudieron listar las impresoras</option>`
+    console.error(err)
+  }
+
+  // ── Cajón de dinero ──
+  // Se ofrecen las impresoras y, además, los puertos: una impresora vieja conectada por
+  // serie o paralelo no aparece en la lista del sistema y aun así abre el cajón.
+  const PUERTOS = ['COM1', 'COM2', 'COM3', 'COM4', 'LPT1']
+  function pintarDestinosCajon(impresoras) {
+    const actual = settings.cashDrawer.target
+    const opcion = (valor, texto) => `<option value="${escape(valor)}"${valor === actual ? ' selected' : ''}>${escape(texto)}</option>`
+    $('#s-drawer-target').innerHTML =
+      opcion('', 'La impresora del ticket') +
+      impresoras.map((i) => opcion(i.name, i.name)).join('') +
+      PUERTOS.map((p) => opcion(p, `Puerto ${p}`)).join('')
+  }
+
+  pintarDestinosCajon(impresoras)
+
+  const guardarCajon = () => {
+    const f = $('#s-drawer')
+    return save({
+      cashDrawer: { enabled: $('#s-drawer-enabled').checked, target: f.target.value, pin: Number(f.pin.value) }
+    })
+  }
+
+  $('#s-drawer-enabled').addEventListener('change', () => {
+    $('#s-drawer-body').classList.toggle('disabled', !$('#s-drawer-enabled').checked)
+    guardarCajon()
+  })
+  $('#s-drawer').addEventListener('change', guardarCajon)
+
+  $('#s-test-drawer').addEventListener('click', async () => {
+    const boton = $('#s-test-drawer')
+    boton.disabled = true
+    try {
+      // Se guarda primero: probar lo que hay en pantalla y no lo guardado sería probar otra cosa.
+      await guardarCajon()
+      await window.api.drawer.open()
+      toast('Pulso enviado: el cajón debería haberse abierto')
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      boton.disabled = false
+    }
+  })
+
+  $('#s-test-print').addEventListener('click', async () => {
+    const boton = $('#s-test-print')
+    boton.disabled = true
+    try {
+      if (await window.api.ticket.printSample()) toast('Ticket de prueba enviado')
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      boton.disabled = false
+    }
+  })
 
   // ── Apariencia: se aplica en vivo y se guarda ──
   $('#s-appearance').addEventListener('change', async (e) => {

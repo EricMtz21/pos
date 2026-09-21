@@ -45,6 +45,8 @@ export function initShortcuts() {
     (e) => {
       // Con un modal abierto manda el modal: Esc lo cierra de forma nativa.
       if (document.querySelector('dialog[open]')) return
+      // Con la pantalla de acceso puesta, nada de lo que hay detrás debe responder.
+      if (document.querySelector('.login')) return
 
       const combo = comboFromEvent(e)
       const list = combo && bindings.get(combo)

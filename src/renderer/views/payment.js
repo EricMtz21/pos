@@ -17,7 +17,7 @@ const BILLS = [5000, 10000, 20000, 50000, 100000]
  * Cobro de la venta. Devuelve { payments, cashReceived } listo para sales.create,
  * o null si se cancela.
  */
-export function openPayment({ total }) {
+export function openPayment({ total, subtotal = total, discount = 0 }) {
   let method = 'cash'
   let received = total // efectivo recibido, en centavos
   const mixed = { cash: 0, debit: 0, credit: 0, transfer: 0 }
@@ -25,6 +25,8 @@ export function openPayment({ total }) {
   return openModal({
     title: 'Cobrar',
     body: `
+      ${discount > 0 ? `<div class="totals-row"><span>Subtotal</span><span>${formatMoney(subtotal)}</span></div>
+      <div class="totals-row"><span>Descuento</span><span>-${formatMoney(discount)}</span></div>` : ''}
       <div class="pay-total"><span>Total a cobrar</span><strong id="pay-amount">${formatMoney(total)}</strong></div>
       <div class="methods">
         ${METHODS.map(

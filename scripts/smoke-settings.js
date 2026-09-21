@@ -64,6 +64,31 @@ electron.app.whenReady().then(async () => {
     'la vista previa de 80 mm excede los 48 caracteres'
   )
 
+  // ── Cajón de dinero ──
+  check(
+    await run(`document.querySelector('#s-drawer-body').classList.contains('disabled')`),
+    'el cajón debería empezar apagado y con sus opciones atenuadas'
+  )
+  await run(`(() => { const c = document.querySelector('#s-drawer-enabled')
+    c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await waitFor(
+    `!document.querySelector('#s-drawer-body').classList.contains('disabled')`,
+    'al encender el cajón se habilitan sus opciones'
+  )
+  await run(`(() => { const f = document.querySelector('#s-drawer')
+    f.target.value = 'COM3'; f.pin.value = '1'; f.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await waitFor(
+    `window.api.settings.get().then(s => s.cashDrawer.enabled && s.cashDrawer.target === 'COM3' && s.cashDrawer.pin === 1)`,
+    'el cajón se guarda con su destino y su patilla'
+  )
+  // Sin cajón conectado el pulso falla; lo que importa es que falle con un mensaje y no
+  // rompa nada. Abrirlo de verdad solo se puede comprobar con el aparato delante.
+  const fallo = await run(`window.api.drawer.open().then(() => '', e => e.message)`)
+  check(/cajón|COM3/i.test(fallo), `el fallo del cajón no explica nada: "${fallo}"`)
+  await run(`(() => { const c = document.querySelector('#s-drawer-enabled')
+    c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })) })()`)
+  await waitFor(`window.api.settings.get().then(s => !s.cashDrawer.enabled)`, 'el cajón se puede volver a apagar')
+
   // ── Umbral de stock: cambia lo que marca el inventario ──
   const stockBajoAntes = await run(`window.api.products.lowStock().then(p => p.length)`)
   await run(`(() => { const f = document.querySelector('#s-inventory')

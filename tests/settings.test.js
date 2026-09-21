@@ -39,6 +39,15 @@ test('validación: acepta una configuración correcta', () => {
   )
 })
 
+test('validación: el cajón admite impresora o puerto, y solo las dos patillas reales', () => {
+  assert.deepEqual(validateSettings({ cashDrawer: { enabled: true, target: 'TM-T20', pin: 0 } }), [])
+  assert.deepEqual(validateSettings({ cashDrawer: { enabled: true, target: 'COM1', pin: 1 } }), [])
+  // Destino vacío es válido: significa «la impresora del ticket».
+  assert.deepEqual(validateSettings({ cashDrawer: { enabled: false, target: '', pin: 0 } }), [])
+  assert.match(validateSettings({ cashDrawer: { enabled: true, target: '', pin: 3 } })[0], /patilla/i)
+  assert.match(validateSettings({ cashDrawer: { enabled: 'sí', target: '', pin: 0 } })[0], /sí o no/)
+})
+
 test('validación: rechaza valores imposibles con mensajes legibles', () => {
   assert.match(validateSettings({ theme: 'neón' })[0], /Tema inválido/)
   assert.match(validateSettings({ accent: 'rojo' })[0], /#RRGGBB/)

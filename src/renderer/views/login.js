@@ -1,13 +1,13 @@
-import { refreshSession } from '../session.js'
+import { refreshSession, session } from '../session.js'
 
 /**
  * Pantalla de acceso con PIN. Se muestra a pantalla completa y solo se cierra
  * cuando alguien entra: sin sesión no hay nada que hacer en la aplicación.
  * Resuelve con el estado de sesión ya actualizado.
  */
-export async function showLogin() {
+export async function showLogin({ preseleccionado = null } = {}) {
   const users = await window.api.auth.users()
-  let selected = users[0] ?? null
+  let selected = users.find((u) => u.id === preseleccionado) ?? users[0] ?? null
   let pin = ''
 
   const overlay = document.createElement('div')
@@ -60,7 +60,10 @@ export async function showLogin() {
       if (!selected) return fail('Elige un usuario')
       if (pin.length < 4) return fail('El PIN tiene al menos 4 dígitos')
       try {
-        const state = await window.api.auth.login(selected.id, pin)
+        await window.api.auth.login(selected.id, pin)
+        // Sin esto el renderer se queda con el rol anterior: la cabecera salía vacía y
+        // un administrador perdía el acceso a Ajustes hasta recargar la ventana.
+        const state = await refreshSession()
         overlay.remove()
         window.removeEventListener('keydown', onKey, true)
         resolve(state)
@@ -122,4 +125,19 @@ export async function ensureSession() {
   const state = await refreshSession()
   if (state.required && !state.user) return showLogin()
   return state
+}
+
+/**
+ * Bloqueo rápido: cierra la sesión y pone la pantalla de PIN por encima, sin recargar.
+ * Si vuelve la misma persona, sigue con su venta a medias. Si entra otra, la pantalla
+ * se reinicia: su carrito no es suyo, y sus permisos pueden ser otros.
+ */
+export async function lockScreen() {
+  const antes = session().user
+  if (!antes) return
+
+  await window.api.auth.logout()
+  await refreshSession()
+  const estado = await showLogin({ preseleccionado: antes.id })
+  if (estado.user?.id !== antes.id) location.reload()
 }

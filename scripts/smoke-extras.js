@@ -200,10 +200,32 @@ electron.app.whenReady().then(async () => {
   await waitFor(`document.querySelector('.nav-item[data-view]')`, 'la app recarga con la sesión de administrador')
   const menuAdmin = await run(`[...document.querySelectorAll('.nav-item[data-view]')].map(b => b.dataset.view)`)
   check(menuAdmin.includes('settings'), `el administrador debería ver Ajustes: ${menuAdmin.join(', ')}`)
+  // Entrar por la pantalla de PIN debe dejar el rol correcto en la interfaz. Antes no
+  // se refrescaba el estado local y un administrador perdía Ajustes hasta recargar.
+  await run(`window.api.auth.logout()`)
+  await run(`location.reload()`)
+  await waitFor(`document.querySelector('.login')`, 'la pantalla de PIN aparece')
+  for (const d of ['4', '3', '2', '1']) await key(d)
+  await key('Enter')
+  await waitFor(`!document.querySelector('.login')`, 'se entra con el PIN')
   check(
-    /Eric/.test(await run(`document.querySelector('#version').textContent`)),
-    'la barra lateral debería mostrar quién está en sesión'
+    (await run(`[...document.querySelectorAll('.nav-item[data-view]')].map((b) => b.dataset.view)`)).includes('settings'),
+    'el administrador perdió Ajustes al entrar por la pantalla de PIN'
   )
+
+  // Bloqueo rápido: cierra la sesión y tapa la pantalla, sin recargar.
+  await key('l', { ctrlKey: true })
+  await waitFor(`document.querySelector('.login')`, 'Ctrl+L bloquea la caja')
+  check((await run(`window.api.auth.state().then((s) => s.user)`)) === null, 'bloquear no cerró la sesión')
+  await key('F12')
+  check(!(await run(`Boolean(document.querySelector('#pay-amount'))`)), 'los atajos responden detrás del bloqueo')
+  for (const d of ['4', '3', '2', '1']) await key(d)
+  await key('Enter')
+  await waitFor(`!document.querySelector('.login')`, 'se desbloquea con el mismo usuario')
+
+  const cabecera = await run(`document.querySelector('#brand').innerText`)
+  check(/Eric/.test(cabecera), `la cabecera debería mostrar quién está en sesión: "${cabecera}"`)
+  check(/ADMINISTRADOR/i.test(cabecera), `la cabecera debería mostrar el rol: "${cabecera}"`)
 
   finish('devoluciones, cancelaciones, historial, usuarios y permisos')
 }).catch(fail)

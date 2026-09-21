@@ -13,7 +13,10 @@ export const SETTINGS_DEFAULTS = {
   accent: '#3B82F6',
   lowStockThreshold: 5,
   business: { name: 'Mi Negocio', address: '', taxId: '', phone: '', footer: '¡Gracias por su compra!' },
-  ticket: { width: 58, autoPrint: false, printer: '' },
+  ticket: { width: 58, printer: '' },
+  // El cajón cuelga de la impresora, no de la computadora. `target` vacío significa
+  // «la misma del ticket»; también acepta un puerto directo (COM1, LPT1).
+  cashDrawer: { enabled: false, target: '', pin: 0 },
   // Ver §7 del documento. Desactivada hasta confirmar las reglas con Eric.
   cardCommission: {
     enabled: false,

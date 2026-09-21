@@ -18,34 +18,96 @@
   gap: 6px;
 }
 
+/* Barra superior: el periodo a la izquierda, las acciones a la derecha, cada
+   bloque rotulado. Antes era una fila larga que se partía sin criterio. */
+.report-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 18px 24px;
+  margin-bottom: 26px;
+}
+
+.group-label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.period-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.period-controls input {
+  width: auto;
+}
+
+.report-actions .button-row {
+  justify-content: flex-end;
+}
+
+/* ── Tarjetas de resumen ─────────────────────────────────── */
 .report-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 32px;
+  margin-bottom: 30px;
+}
+
+.card-group {
+  flex: 1 1 340px;
+}
+
+.card-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  margin-bottom: 20px;
 }
 
 .report-card {
+  position: relative;
   display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 4px 10px;
+  gap: 4px;
   padding: 16px 18px;
   background: var(--surface);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
+/* El icono es un apoyo, no un dato: se asoma por la esquina en vez de competir
+   con la cifra, que es lo que se viene a leer. */
 .report-card .icon {
-  grid-row: span 2;
-  width: 1.6em;
-  height: 1.6em;
+  position: absolute;
+  right: -10px;
+  bottom: -12px;
+  width: 64px;
+  height: 64px;
   color: var(--text-muted);
+  opacity: 0.12;
+  pointer-events: none;
 }
 
 .report-card .label {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* El neto es la cifra que el negocio se lleva: se marca, no se decora. */
+.report-card.is-net strong {
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .report-card.is-net strong {
+  color: color-mix(in srgb, var(--accent) 85%, #0b1220);
 }
 
 .report-card strong {
@@ -55,11 +117,30 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Separador de secciones: agrupa las tablas por lo que responden. */
+.report-section {
+  margin: 4px 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.report-grid + .report-section {
+  margin-top: 12px;
+}
+
 .report-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 20px;
-  /* Ver settings.css: el padding-bottom de .main no se renderiza al hacer scroll. */
+  margin-bottom: 30px;
+}
+
+/* Ver settings.css: el padding-bottom de .main no se renderiza al hacer scroll. */
+.report-grid:last-child {
+  margin-bottom: 0;
   padding-bottom: 32px;
 }
 

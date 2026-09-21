@@ -61,6 +61,8 @@ export function renderTicket(sale, { business = {}, width = 58 } = {}) {
   lines.push(rule(w, '='))
   lines.push(`Folio: ${sale.folio}`)
   lines.push(`Fecha: ${dateTime(sale.created_at)}`)
+  // Solo si la aplicación tiene usuarios: sin ellos no hay a quién atribuir la venta.
+  if (sale.user_name) lines.push(...wrap(`Atendió: ${sale.user_name}`, w))
   if (sale.status === 'cancelled') lines.push(center('*** VENTA CANCELADA ***', w))
   lines.push(rule(w))
 

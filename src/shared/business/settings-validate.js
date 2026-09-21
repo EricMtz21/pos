@@ -30,8 +30,16 @@ const VALIDATORS = {
     if (!v || typeof v !== 'object') return ['La configuración del ticket es inválida']
     const errors = []
     if (!TICKET_WIDTHS.includes(v.width)) errors.push('El ancho del ticket debe ser 58 u 80 mm')
-    if ('autoPrint' in v && typeof v.autoPrint !== 'boolean') errors.push('«Imprimir automáticamente» debe ser sí o no')
     if ('printer' in v && !isString(v.printer)) errors.push('La impresora debe ser texto')
+    return errors
+  },
+
+  cashDrawer: (v) => {
+    if (!v || typeof v !== 'object') return ['La configuración del cajón es inválida']
+    const errors = []
+    if (typeof v.enabled !== 'boolean') errors.push('«Abrir el cajón» debe ser sí o no')
+    if ('target' in v && !isString(v.target)) errors.push('El destino del cajón debe ser texto')
+    if (![0, 1].includes(v.pin)) errors.push('La patilla del cajón debe ser 2 o 5')
     return errors
   },
 

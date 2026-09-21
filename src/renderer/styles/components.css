@@ -226,6 +226,8 @@ dialog {
   padding: 0;
   color: var(--text);
   background: var(--surface);
+  /* Sin esto asoma el borde «2px groove» que el navegador pone por defecto. */
+  border: none;
   border-radius: var(--radius);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
 }

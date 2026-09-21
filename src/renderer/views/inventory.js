@@ -1,5 +1,6 @@
 import { icon, hydrateIcons } from '../icons.js'
 import { register, kbd } from '../shortcuts/index.js'
+import { onScan } from '../scanner.js'
 import { toast } from '../components/toast.js'
 import { confirmModal } from '../components/modal.js'
 import { openProductForm, openStockForm } from './product-form.js'
@@ -161,6 +162,27 @@ export async function renderInventory(container) {
 
   // Atajos de esta vista; se sueltan al salir de ella.
   const disposers = [
+    // Aquí escanear no vende: abre el producto para editarlo, o lo da de alta con
+    // el código ya puesto, que es justo lo que se hace con un artículo nuevo en mano.
+    onScan(async (code) => {
+      const producto = await window.api.products.findByCode(code)
+      if (producto) {
+        if (allowed('products:update')) return edit(producto)
+        search.value = code
+        filters.text = code
+        return refresh()
+      }
+      if (!allowed('products:create')) return toast(`Sin producto con el código ${code}`, 'error')
+      const data = await openProductForm({ product: { code }, lowStockThreshold: settings.lowStockThreshold })
+      if (!data) return
+      try {
+        const saved = await window.api.products.create(data)
+        toast(`Producto creado: ${saved.name}`)
+        await refresh()
+      } catch (err) {
+        toast(err.message, 'error')
+      }
+    }),
     register('F3', () => search.select(), 'Buscar producto'),
     ...(allowed('products:create') ? [register('Ctrl+N', create, 'Nuevo producto')] : [])
   ]

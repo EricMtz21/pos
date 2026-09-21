@@ -54,8 +54,18 @@ contextBridge.exposeInMainWorld('api', {
   ticket: {
     preview: (saleId) => call('ticket:preview', saleId),
     previewSample: () => call('ticket:previewSample'),
+    printSample: () => call('ticket:printSample'),
     print: (saleId) => call('ticket:print', saleId),
     savePdf: (saleId) => call('ticket:savePdf', saleId)
+  },
+  drawer: {
+    open: () => call('drawer:open'),
+    /** El cajón se abre solo al cobrar en efectivo; si falla, avisa por aquí. */
+    onFail: (callback) => {
+      const listener = (_event, mensaje) => callback(mensaje)
+      ipcRenderer.on('drawer:failed', listener)
+      return () => ipcRenderer.off('drawer:failed', listener)
+    }
   },
   reports: {
     get: (range) => call('reports:get', range),
@@ -68,6 +78,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   data: {
     info: () => call('data:info'),
+    printers: () => call('printers:list'),
     openFolder: () => call('data:openFolder'),
     chooseLogo: () => call('logo:choose')
   },

@@ -44,13 +44,27 @@
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 8px;
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: -0.02em;
+  display: grid;
+  gap: 2px;
+  padding: 0 12px;
+}
+
+.brand[hidden] {
+  display: none;
+}
+
+.brand-role {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.brand-name {
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.01em;
 }
 
 .nav {

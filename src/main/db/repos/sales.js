@@ -23,7 +23,10 @@ export function createSalesRepo(db, { settings, products, audit }) {
   }
 
   function get(id) {
-    const sale = db.prepare('SELECT * FROM sales WHERE id = ?').get(id)
+    // Se trae el nombre de quien cobró: el id por sí solo no sirve en pantalla.
+    const sale = db
+      .prepare('SELECT s.*, u.name AS user_name FROM sales s LEFT JOIN users u ON u.id = s.user_id WHERE s.id = ?')
+      .get(id)
     if (!sale) return null
     return {
       ...sale,
@@ -178,9 +181,10 @@ export function createSalesRepo(db, { settings, products, audit }) {
     list({ from = today(), to = today(), limit = 200 } = {}) {
       return db
         .prepare(
-          `SELECT * FROM sales
-           WHERE date(created_at) BETWEEN @from AND @to
-           ORDER BY id DESC LIMIT @limit`
+          `SELECT s.*, u.name AS user_name
+           FROM sales s LEFT JOIN users u ON u.id = s.user_id
+           WHERE date(s.created_at) BETWEEN @from AND @to
+           ORDER BY s.id DESC LIMIT @limit`
         )
         .all({ from, to, limit })
     },

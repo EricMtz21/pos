@@ -82,15 +82,20 @@ export function createReportsRepo(db, { returns }) {
     },
 
     /** Ventas individuales del periodo, para la tabla de detalle y el Excel. */
-    sales({ from, to, limit = 1000 }) {
+    sales({ from, to, folio = '', limit = 1000 }) {
+      // Buscar por folio ignora el rango: quien busca un ticket concreto no sabe de
+      // qué día fue, y obligarle a acertar la fecha haría inútil la búsqueda.
+      const texto = String(folio).trim()
       return db
         .prepare(
-          `SELECT s.*, (SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id) AS items
-           FROM sales s
-           WHERE date(s.created_at) BETWEEN @from AND @to
+          `SELECT s.*, u.name AS user_name,
+                  (SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id) AS items
+           FROM sales s LEFT JOIN users u ON u.id = s.user_id
+           WHERE (@folio != '' OR date(s.created_at) BETWEEN @from AND @to)
+             AND (@folio = '' OR s.folio LIKE @like)
            ORDER BY s.id DESC LIMIT @limit`
         )
-        .all({ from, to, limit })
+        .all({ from, to, folio: texto, like: `%${texto}%`, limit })
     }
   }
 }

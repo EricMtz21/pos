@@ -57,20 +57,40 @@ async function renderInWindow(html) {
   }
 }
 
+/** Impresoras instaladas, para poder elegir una en Ajustes. */
+export async function listPrinters() {
+  const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false } })
+  try {
+    const impresoras = await win.webContents.getPrintersAsync()
+    return impresoras.map((p) => ({ name: p.name, description: p.displayName || p.description || '', default: p.isDefault }))
+  } finally {
+    win.destroy()
+  }
+}
+
 /**
- * Imprime el ticket abriendo el diálogo del sistema, así funciona con cualquier impresora
- * instalada (incluida una térmica) sin configurarla en la app.
+ * Imprime el ticket. Con una impresora elegida en Ajustes sale directa, sin diálogo:
+ * en un mostrador, dos clics por venta se notan. Sin elegir, se abre el diálogo del
+ * sistema, que es lo único que puede funcionar sin saber a dónde mandar el papel.
  */
-export async function printTicket(sale, { business, width }) {
+export async function printTicket(sale, { business, width, printer }) {
   const logo = await logoTag(business?.logo, width)
   const win = await renderInWindow(ticketHtml(renderTicket(sale, { business, width }), width, logo))
+  const directa = Boolean(printer)
   try {
-    const { failureReason } = await win.webContents.print({ silent: false, margins: { marginType: 'none' } })
+    const { failureReason } = await win.webContents.print({
+      silent: directa,
+      deviceName: printer || undefined,
+      margins: { marginType: 'none' }
+    })
     if (failureReason) throw new Error(failureReason)
     return true
   } catch (err) {
-    // Cancelar el diálogo de impresión no es un error que valga la pena mostrar.
-    if (/cancel/i.test(err.message)) return false
+    // Cancelar el diálogo no es un error que valga la pena mostrar.
+    if (!directa && /cancel/i.test(err.message)) return false
+    if (directa) {
+      throw new Error(`No se pudo imprimir en «${printer}»: ${err.message}. Revisa que esté encendida y conectada.`)
+    }
     throw err
   } finally {
     win.destroy()

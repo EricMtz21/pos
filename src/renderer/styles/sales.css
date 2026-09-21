@@ -138,9 +138,18 @@
   background: var(--surface);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  align-self: start;
-  position: sticky;
-  top: 0;
+  /* Ocupa toda la altura de la columna: el total y las acciones quedan abajo,
+     donde la mano ya está, y la columna deja de flotar a media pantalla. */
+  height: 100%;
+  min-height: 0;
+}
+
+/* Empuja el total y los botones al pie del panel. */
+.totals-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: auto;
 }
 
 .totals-row {
@@ -173,6 +182,45 @@
 
 .totals .btn.ghost {
   justify-content: center;
+}
+
+/* Fila que además es botón: el descuento se toca, no solo se lee. */
+.totals-row.as-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.totals-row.as-link:hover:not([disabled]) span:first-child {
+  color: var(--text);
+}
+
+.totals-row.as-link[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.totals-row.as-link.is-set {
+  color: var(--text);
+}
+
+/* El precio de cada línea es editable: se marca cuando deja de ser el de lista. */
+.price-btn {
+  padding: 3px 8px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.price-btn:hover {
+  color: var(--text);
+}
+
+.price-btn.is-custom {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* ── Cobro ───────────────────────────────────────────────── */
@@ -327,4 +375,135 @@
   margin: 0;
   font: 12px/1.45 'Consolas', 'Courier New', monospace;
   white-space: pre;
+}
+
+/* ── Carrito vacío ───────────────────────────────────────── */
+/* Sin líneas no hay nada que encabezar, y el encabezado estorba al dibujo. */
+.cart-wrap.is-empty thead {
+  display: none;
+}
+
+/* La tabla ocupa todo el alto y la celda centra: así el dibujo queda en el medio
+   del área del carrito, no pegado arriba. */
+.cart-wrap.is-empty table {
+  height: 100%;
+}
+
+.cart-wrap.is-empty td {
+  padding: 0;
+  border-bottom: none;
+  vertical-align: middle;
+}
+
+.cart-wrap.is-empty tbody tr:hover td {
+  background: transparent;
+}
+
+.cart-empty {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+}
+
+.cart-empty-title {
+  margin-top: 22px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Pila de tickets: el de delante se lee, los de atrás solo dan profundidad. */
+.receipt-stack {
+  position: relative;
+  width: 186px;
+  height: 128px;
+}
+
+.receipt {
+  position: absolute;
+  inset: 0;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+}
+
+.receipt-back-2 {
+  transform: rotate(-8deg) translate(-17px, 6px);
+  opacity: 0.45;
+}
+
+.receipt-back-1 {
+  transform: rotate(5deg) translate(13px, 3px);
+  opacity: 0.7;
+}
+
+.receipt-front {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow);
+}
+
+/* Renglones de texto insinuados, sin fingir contenido que no existe. */
+.receipt-line {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0.25;
+}
+
+.w-70 { width: 70%; }
+.w-55 { width: 55%; }
+.w-45 { width: 45%; }
+
+.receipt .barcode {
+  width: 100%;
+  height: 30px;
+  margin: 3px 0;
+  fill: var(--text);
+  opacity: 0.75;
+}
+
+.receipt-perf {
+  width: 100%;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--text-muted) 0 4px,
+    transparent 4px 8px
+  );
+  opacity: 0.4;
+}
+
+/* Barrido de escaneo: el único elemento con acento, y discreto. */
+.scan-sweep {
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to right, transparent, var(--accent), transparent);
+  box-shadow: 0 0 10px 1px var(--accent);
+  opacity: 0.85;
+  animation: escaneo 3.2s ease-in-out infinite;
+}
+
+@keyframes escaneo {
+  0%, 12% { top: 8%; opacity: 0; }
+  20% { opacity: 0.85; }
+  80% { opacity: 0.85; }
+  88%, 100% { top: 92%; opacity: 0; }
+}
+
+/* Un barrido perpetuo molesta a quien pidió menos movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  .scan-sweep {
+    animation: none;
+    top: 50%;
+    opacity: 0.4;
+  }
 }
