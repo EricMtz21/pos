@@ -1,7 +1,7 @@
 // Prueba de humo de Ajustes: persistencia, editor de tramos con validación,
 // respaldo y restauración real de la base. Uso: npm run smoke:settings
 import electron from 'electron'
-import { existsSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { bootApp, setup, fail } from './smoke-lib.js'
 
@@ -63,6 +63,18 @@ electron.app.whenReady().then(async () => {
     Math.max(...previa80.split('\n').map((l) => l.length)) <= 48,
     'la vista previa de 80 mm excede los 48 caracteres'
   )
+
+  // ── Copia del respaldo fuera de la máquina ──
+  // Se comprueba de punta a punta: se elige carpeta, se respalda y el archivo aparece allá.
+  const fuera = join(electron.app.getPath('temp'), `pos-usb-${Date.now()}`)
+  await run(`window.api.settings.set({ backupFolder: ${JSON.stringify(fuera)} })`)
+  await run(`document.querySelector('#s-backup').click()`)
+  await waitFor(`/Respaldo creado/.test([...document.querySelectorAll('.toast')].at(-1)?.textContent ?? '')`, 'respaldo manual')
+  const copiados = existsSync(fuera) ? readdirSync(fuera) : []
+  check(copiados.length === 1, `en la carpeta externa hay ${copiados.length} archivos, se esperaba 1`)
+  check(/\.sqlite$/.test(copiados[0] ?? ''), `lo copiado no parece un respaldo: ${copiados[0]}`)
+  rmSync(fuera, { recursive: true, force: true })
+  await run(`window.api.settings.set({ backupFolder: '' })`)
 
   // ── Cajón de dinero ──
   check(

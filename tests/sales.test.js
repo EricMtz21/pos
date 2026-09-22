@@ -274,3 +274,73 @@ test('venta: se puede vender aunque el stock quede negativo (el mostrador manda)
   assert.equal(venta.status, 'completed')
   assert.equal(repos.products.get(producto.id).stock, -2)
 })
+
+// ── Venta rápida: una línea que no está en el catálogo ───────────────────────
+
+test('venta rápida: cobra una línea suelta sin tocar el inventario', () => {
+  const { repos, producto } = setup()
+  const venta = repos.sales.create({
+    items: [
+      { productId: producto.id, qty: 1, unitPrice: 1800 },
+      { productId: null, name: '  Marco de madera  ', qty: 1, unitPrice: 35000, taxRate: 0.16, cost: 18000 }
+    ],
+    payments: [{ method: 'cash', amount: 36800 }]
+  })
+
+  const suelta = venta.items.find((i) => i.product_id === null)
+  assert.equal(suelta.name_snapshot, 'Marco de madera', 'el concepto debe guardarse recortado')
+  assert.equal(suelta.cost, 18000)
+  assert.equal(suelta.tax_rate, 0.16)
+  assert.equal(venta.total, 36800)
+  // El IVA sale de la base sumada de las dos líneas, no línea por línea.
+  assert.equal(venta.tax, 36800 - Math.round(36800 / 1.16))
+  // El producto de catálogo sí descuenta; la línea suelta no tiene de dónde.
+  assert.equal(repos.products.get(producto.id).stock, 9)
+  assert.equal(repos.products.moves(producto.id).length, 1)
+})
+
+test('venta rápida: el costo es opcional y sin él la utilidad no se inventa', () => {
+  const { repos } = setup()
+  const hoy = new Date().toLocaleDateString('en-CA')
+  repos.sales.create({
+    items: [{ productId: null, name: 'Mano de obra', qty: 1, unitPrice: 20000, taxRate: 0 }],
+    payments: [{ method: 'cash', amount: 20000 }]
+  })
+  const r = repos.reports.summary({ from: hoy, to: hoy })
+  assert.equal(r.netRevenue, 20000)
+  assert.equal(r.cost, 0)
+  assert.equal(r.costUnknown, 1, 'la línea sin costo tiene que señalarse')
+})
+
+test('venta rápida: el proceso principal rechaza lo que la pantalla podría colar', () => {
+  const { repos } = setup()
+  const vender = (item) =>
+    repos.sales.create({ items: [item], payments: [{ method: 'cash', amount: item.unitPrice * (item.qty ?? 1) }] })
+
+  assert.throws(() => vender({ productId: null, name: '   ', qty: 1, unitPrice: 100, taxRate: 0 }), /concepto/)
+  assert.throws(() => vender({ productId: null, name: 'X', qty: 1, unitPrice: 10.5, taxRate: 0 }), /Precio inválido/)
+  assert.throws(() => vender({ productId: null, name: 'X', qty: 1, unitPrice: 100, taxRate: 2 }), /Impuesto inválido/)
+  assert.throws(() => vender({ productId: null, name: 'X', qty: 0, unitPrice: 100, taxRate: 0 }), /Cantidad inválida/)
+  assert.throws(
+    () => vender({ productId: null, name: 'X', qty: 1, unitPrice: 100, taxRate: 0, cost: -5 }),
+    /Costo inválido/
+  )
+})
+
+test('venta rápida: se puede devolver y cancelar sin reponer stock que no existe', () => {
+  const { repos } = setup()
+  const venta = repos.sales.create({
+    items: [{ productId: null, name: 'Marco', qty: 2, unitPrice: 10000, taxRate: 0, cost: 4000 }],
+    payments: [{ method: 'cash', amount: 20000 }]
+  })
+  const [linea] = repos.returns.returnableItems(venta.id)
+  const devolucion = repos.returns.create({ saleId: venta.id, items: [{ saleItemId: linea.id, qty: 1 }] })
+  assert.equal(devolucion.total, 10000)
+
+  const otra = repos.sales.create({
+    items: [{ productId: null, name: 'Otro', qty: 1, unitPrice: 5000, taxRate: 0 }],
+    payments: [{ method: 'cash', amount: 5000 }]
+  })
+  repos.sales.cancel(otra.id, { reason: 'prueba' })
+  assert.equal(repos.sales.get(otra.id).status, 'cancelled')
+})

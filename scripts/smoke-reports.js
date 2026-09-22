@@ -58,6 +58,25 @@ electron.app.whenReady().then(async () => {
   check(/-\$1\.00/.test(porMetodo['Tarjeta débito']?.[2]), `comisión de débito al 2 %: ${JSON.stringify(porMetodo['Tarjeta débito'])}`)
   check(porMetodo['Efectivo']?.[2] === '—', 'el efectivo no debe mostrar comisión')
 
+  // ── Ganancia: lo que entró sin IVA menos lo que costó comprarlo ──
+  const ganancia = await run(`(async () => {
+    const hoy = new Date().toLocaleDateString('en-CA')
+    const { summary } = await window.api.reports.get({ from: hoy, to: hoy })
+    const tarjetas = [...document.querySelectorAll('.report-card')]
+      .map(c => c.querySelector('.label').textContent + '=' + c.querySelector('strong').textContent)
+    return { summary, tarjetas }
+  })()`)
+  const { netRevenue, cost, profit, costUnknown } = ganancia.summary
+  check(netRevenue > 0 && cost > 0, `sin ingreso o sin costo: ${netRevenue} / ${cost}`)
+  check(profit === netRevenue - cost, `la utilidad no cuadra: ${profit} ≠ ${netRevenue} - ${cost}`)
+  check(costUnknown === 0, `${costUnknown} líneas sin costo congelado en ventas recién hechas`)
+  check(
+    ganancia.tarjetas.some((t) => t.startsWith('Utilidad=')),
+    `no hay tarjeta de utilidad: ${ganancia.tarjetas}`
+  )
+  // El IVA no es ganancia: el ingreso sin IVA tiene que ser menor que el bruto cobrado.
+  check(netRevenue < ganancia.summary.gross, `el ingreso sin IVA (${netRevenue}) no puede igualar al bruto`)
+
   // ── Gráficos: cuentan lo mismo que las tablas, y deben cuadrar con ellas ──
   const graficos = await run(`({
     tramos: document.querySelectorAll('.donut-seg').length,

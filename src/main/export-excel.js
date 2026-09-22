@@ -57,7 +57,10 @@ export function buildWorkbook({ from, to, summary, byDay, byMethod, topProducts,
     ['IVA incluido', pesos(summary.tax), true],
     ['Comisiones de tarjeta', pesos(summary.commission), true],
     ['Venta neta', pesos(summary.net), true],
-    ['Ticket promedio', pesos(summary.averageTicket), true]
+    ['Ticket promedio', pesos(summary.averageTicket), true],
+    ['Venta sin IVA', pesos(summary.netRevenue), true],
+    ['Costo de lo vendido', pesos(summary.cost), true],
+    ['Utilidad', pesos(summary.profit), true]
   ]
   rows.forEach(([label, value, money]) => {
     const row = resumen.addRow([label, value])

@@ -3,7 +3,7 @@ import { appendFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { openDatabase } from './db/connection.js'
 import { createRepos } from './db/repos/index.js'
-import { backupDatabase } from './db/backup.js'
+import { backupDatabase, copyBackupTo } from './db/backup.js'
 import { restoreDatabase } from './data-files.js'
 import { autoBackup } from './auto-backup.js'
 import { createUpdater } from './updater.js'
@@ -85,13 +85,27 @@ function createWindow() {
   else win.loadFile(join(__dirname, '../renderer/index.html'))
 }
 
-app.whenReady().then(() => {
-  try {
-    arrancar()
-  } catch (err) {
-    fatal(err, 'arranque')
-  }
-})
+// Una sola caja por computadora. Dos ventanas sobre la misma base se pisan: los folios
+// son únicos por día, así que la segunda venta simultánea falla delante del cliente.
+// Quien vuelve a abrir el icono quiere la caja que ya tiene, así que se le trae al frente.
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  })
+
+  app.whenReady().then(() => {
+    try {
+      arrancar()
+    } catch (err) {
+      fatal(err, 'arranque')
+    }
+  })
+}
 
 function arrancar() {
   Menu.setApplicationMenu(null)
@@ -101,11 +115,27 @@ function arrancar() {
   const dbPath = join(dataDir, 'pos.sqlite')
   db = openDatabase(dbPath, { backupDir })
   const repos = createRepos(db)
+
+  /**
+   * Respaldo de la casa y, si hay carpeta configurada, copia fuera de la máquina.
+   * Que falle la copia no invalida el respaldo: el archivo ya está escrito y se avisa,
+   * porque una USB sin poner es justo lo que hay que decirle a quien cierra la caja.
+   */
+  const respaldar = (label) => {
+    const file = backupDatabase(db, backupDir, label)
+    try {
+      copyBackupTo(file, repos.settings.get('backupFolder'))
+    } catch (err) {
+      console.error('[backup]', err)
+      mainWindow?.webContents.send('backup:failed', err.message)
+    }
+    return file
+  }
   if (!app.isPackaged && process.env.POS_SEED === '1') seedSampleData(repos)
 
   // §5.5: respaldo automático al arrancar, como mucho uno al día.
   try {
-    autoBackup({ backupDir, backup: (label) => backupDatabase(db, backupDir, label) })
+    autoBackup({ backupDir, backup: respaldar })
   } catch (err) {
     // Que falle el respaldo no debe impedir abrir la caja.
     console.error('[backup] respaldo automático falló:', err)
@@ -123,7 +153,7 @@ function arrancar() {
     repos,
     updater,
     appInfo: { name: app.getName(), version: app.getVersion() },
-    backup: (label) => backupDatabase(db, backupDir, label),
+    backup: respaldar,
     data: {
       paths: { dataDir, backupDir, dbPath },
       restore: (source) =>

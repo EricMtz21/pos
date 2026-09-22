@@ -2,7 +2,9 @@
 //
 // El precio que se regresa es el mismo al que se vendió (`sale_items.unit_price`),
 // no el precio actual del producto: si subió de precio después, el cliente recibe
-// lo que pagó.
+// lo que pagó. Por eso también se descuenta la parte del descuento de venta que le tocó
+// a la línea: con un 10 % aplicado a toda la venta, devolver el precio de lista sería
+// regresar más dinero del que entró.
 
 const today = () => new Date().toLocaleDateString('en-CA')
 
@@ -70,7 +72,8 @@ export function createReturnsRepo(db, { audit }) {
             )
           }
           // Se devuelve la parte proporcional de la línea, descuentos incluidos.
-          return { ...linea, qty, lineTotal: Math.round((linea.line_total / linea.qty) * qty) }
+          const pagado = linea.line_total - (linea.discount_share ?? 0)
+          return { ...linea, qty, lineTotal: Math.round((pagado / linea.qty) * qty) }
         })
 
         const total = lines.reduce((sum, l) => sum + l.lineTotal, 0)

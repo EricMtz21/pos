@@ -156,6 +156,15 @@ export async function renderSettings(container) {
           <button class="btn" type="button" id="s-folder">Abrir carpeta de datos</button>
           <button class="btn danger" type="button" id="s-restore">Restaurar desde un respaldo…</button>
         </div>
+        <div class="field" style="margin-top:18px">
+          <span>Copia fuera de esta computadora</span>
+          <div class="button-row">
+            <button class="btn" type="button" id="s-backup-folder">Elegir carpeta…</button>
+            <button class="btn ghost" type="button" id="s-backup-folder-clear" hidden>Quitar</button>
+          </div>
+          <span class="hint" id="s-backup-folder-path"></span>
+        </div>
+
         <div class="table-wrap" style="margin-top:14px;max-height:220px">
           <table><thead><tr><th>Respaldo</th><th class="num">Tamaño</th></tr></thead>
           <tbody id="s-backups"></tbody></table>
@@ -401,6 +410,34 @@ export async function renderSettings(container) {
       : '<tr><td colspan="2" class="muted" style="padding:20px;text-align:center">Todavía no hay respaldos.</td></tr>'
   }
   paintBackups(backups)
+
+  // La carpeta externa: sin ella, los respaldos viven en el mismo disco que la base y un
+  // disco muerto se lleva las dos cosas.
+  function paintBackupFolder(carpeta) {
+    $('#s-backup-folder-path').innerHTML = carpeta
+      ? `Cada respaldo automático se copia a <code>${escape(carpeta)}</code>.`
+      : 'Los respaldos solo viven junto a la base de datos. Elige una USB, otro disco o una carpeta sincronizada y cada respaldo se copiará ahí solo.'
+    $('#s-backup-folder-clear').hidden = !carpeta
+  }
+  paintBackupFolder(settings.backupFolder)
+
+  $('#s-backup-folder').addEventListener('click', async () => {
+    try {
+      const carpeta = await window.api.backup.chooseFolder()
+      if (!carpeta) return
+      settings.backupFolder = carpeta
+      paintBackupFolder(carpeta)
+      toast('Las copias irán a esa carpeta')
+    } catch (err) {
+      toast(err.message, 'error')
+    }
+  })
+
+  $('#s-backup-folder-clear').addEventListener('click', async () => {
+    await save({ backupFolder: '' })
+    settings.backupFolder = ''
+    paintBackupFolder('')
+  })
 
   $('#s-backup').addEventListener('click', async () => {
     try {

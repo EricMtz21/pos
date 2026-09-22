@@ -66,6 +66,11 @@
   flex: 1 1 340px;
 }
 
+/* La nota de las líneas sin costo cuelga del grupo, no de una tarjeta. */
+.card-group > .hint {
+  margin-top: 8px;
+}
+
 .card-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -108,6 +113,14 @@
 
 :root[data-theme='light'] .report-card.is-net strong {
   color: color-mix(in srgb, var(--accent) 85%, #0b1220);
+}
+
+/* El porcentaje acompaña a la cifra sin competir con ella. */
+.report-card strong small {
+  margin-left: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 .report-card strong {

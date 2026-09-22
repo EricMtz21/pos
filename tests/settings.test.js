@@ -8,6 +8,7 @@ import { openDatabase } from '../src/main/db/connection.js'
 import { createRepos } from '../src/main/db/repos/index.js'
 import { validateSettings } from '../src/shared/business/settings-validate.js'
 import { inspectDatabaseFile, restoreDatabase, listBackups, importLogo } from '../src/main/data-files.js'
+import { backupDatabase, copyBackupTo } from '../src/main/db/backup.js'
 import { migrations } from '../src/main/db/migrations/index.js'
 
 const tmp = () => mkdtempSync(join(tmpdir(), 'pos-set-'))
@@ -257,4 +258,38 @@ test('logo: copia la imagen, rechaza formatos raros y conserva solo el vigente',
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
+})
+
+// ── Copia del respaldo fuera de la máquina ───────────────────────────────────
+
+test('respaldo externo: copia el archivo a la carpeta elegida y la poda igual', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pos-backup-'))
+  const fuera = join(dir, 'usb')
+  const db = openDatabase(join(dir, 'pos.sqlite'))
+  createRepos(db).products.create({ name: 'X', price_gross: 100 })
+
+  const file = backupDatabase(db, join(dir, 'backups'), 'manual')
+  const copia = copyBackupTo(file, fuera)
+  assert.equal(readdirSync(fuera).length, 1)
+  assert.ok(copia.startsWith(fuera))
+
+  // Sin carpeta configurada no hay nada que copiar, y no es un error.
+  assert.equal(copyBackupTo(file, ''), null)
+
+  // La carpeta se crea si no existe; la poda deja solo los más recientes.
+  for (let i = 0; i < 3; i++) copyBackupTo(backupDatabase(db, join(dir, 'backups'), `n${i}`), fuera, { keep: 2 })
+  assert.equal(readdirSync(fuera).length, 2, 'la copia externa no se poda y llenaría la USB')
+
+  // En Windows hay que cerrar la base antes de borrar (EBUSY).
+  db.close()
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test('respaldo externo: una carpeta imposible falla con un mensaje que se puede enseñar', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pos-backup-'))
+  const file = join(dir, 'algo.sqlite')
+  writeFileSync(file, 'x')
+  // Un archivo no es una carpeta: es justo lo que pasa con una USB que ya no está.
+  assert.throws(() => copyBackupTo(file, join(file, 'dentro')), /No se pudo copiar el respaldo/)
+  rmSync(dir, { recursive: true, force: true })
 })

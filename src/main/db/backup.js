@@ -1,5 +1,5 @@
-import { mkdirSync, readdirSync, unlinkSync } from 'node:fs'
-import { join } from 'node:path'
+import { mkdirSync, readdirSync, unlinkSync, copyFileSync } from 'node:fs'
+import { basename, join } from 'node:path'
 
 const stamp = () => new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').replace('Z', '')
 
@@ -13,6 +13,27 @@ export function backupDatabase(db, dir, label = 'manual', { keep = 20 } = {}) {
   db.exec(`VACUUM INTO '${file.replaceAll("'", "''")}'`)
   pruneBackups(dir, keep)
   return file
+}
+
+/**
+ * Copia el respaldo a una carpeta fuera de la aplicación: una USB, una carpeta
+ * sincronizada, otro disco. Los respaldos automáticos viven junto a la base; si se muere
+ * el disco se mueren los dos, y el negocio se queda sin nada.
+ *
+ * Devuelve la ruta de la copia, o lanza con un mensaje que se pueda enseñar: la USB puede
+ * no estar puesta, y eso hay que decirlo, no tragárselo.
+ */
+export function copyBackupTo(file, folder, { keep = 20 } = {}) {
+  if (!folder) return null
+  try {
+    mkdirSync(folder, { recursive: true })
+    const destino = join(folder, basename(file))
+    copyFileSync(file, destino)
+    pruneBackups(folder, keep)
+    return destino
+  } catch (err) {
+    throw new Error(`No se pudo copiar el respaldo a «${folder}»: ${err.message}`)
+  }
 }
 
 // Conserva solo los `keep` respaldos más recientes (el nombre lleva la fecha, ordena solo).

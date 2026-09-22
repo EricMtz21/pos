@@ -34,6 +34,8 @@ const VALIDATORS = {
     return errors
   },
 
+  backupFolder: (v) => (isString(v) ? [] : ['La carpeta de respaldo debe ser texto']),
+
   cashDrawer: (v) => {
     if (!v || typeof v !== 'object') return ['La configuración del cajón es inválida']
     const errors = []

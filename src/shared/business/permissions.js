@@ -17,6 +17,7 @@ const CASHIER_DENIED = new Set([
   'users:update',
   'users:deactivate',
   'logo:choose',
+  'backup:chooseFolder',
   // Abrir el cajón a mano es sacar dinero sin venta de por medio: eso lo autoriza el
   // dueño. El cajón que se abre solo al cobrar en efectivo no pasa por aquí.
   'drawer:open'

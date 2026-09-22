@@ -17,6 +17,9 @@ export const SETTINGS_DEFAULTS = {
   // El cajón cuelga de la impresora, no de la computadora. `target` vacío significa
   // «la misma del ticket»; también acepta un puerto directo (COM1, LPT1).
   cashDrawer: { enabled: false, target: '', pin: 0 },
+  // Carpeta fuera de la aplicación (USB, carpeta sincronizada, otro disco) donde se copia
+  // cada respaldo automático. Vacío: los respaldos solo viven junto a la base.
+  backupFolder: '',
   // Ver §7 del documento. Desactivada hasta confirmar las reglas con Eric.
   cardCommission: {
     enabled: false,

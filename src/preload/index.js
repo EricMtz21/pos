@@ -103,6 +103,13 @@ contextBridge.exposeInMainWorld('api', {
   backup: {
     list: () => call('backup:list'),
     create: () => call('backup:create'),
+    chooseFolder: () => call('backup:chooseFolder'),
+    /** La copia fuera de la máquina se hace sola tras cada respaldo; si falla, avisa. */
+    onFail: (callback) => {
+      const listener = (_event, mensaje) => callback(mensaje)
+      ipcRenderer.on('backup:failed', listener)
+      return () => ipcRenderer.off('backup:failed', listener)
+    },
     saveAs: () => call('backup:saveAs'),
     inspect: () => call('backup:inspect'),
     restore: (source) => call('backup:restore', source)

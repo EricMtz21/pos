@@ -164,6 +164,34 @@ export async function renderReports(container) {
             ['Venta neta', formatMoney(summary.net), 'wallet', 'is-net']
           ].map(card).join('')}
         </div>
+      </div>
+      <div class="card-group">
+        <span class="group-label">Ganancia</span>
+        <div class="card-row">
+          ${[
+            ['Venta sin IVA', formatMoney(summary.netRevenue), 'banknote'],
+            ['Costo de lo vendido', summary.cost ? `-${formatMoney(summary.cost)}` : formatMoney(0), 'package'],
+            [
+              'Utilidad',
+              `${formatMoney(summary.profit)}${
+                summary.netRevenue ? ` <small>${((summary.profit / summary.netRevenue) * 100).toFixed(0)} %</small>` : ''
+              }`,
+              'chart-column',
+              'is-net'
+            ]
+          ].map(card).join('')}
+        </div>
+        ${
+          summary.costUnknown
+            ? `<p class="hint">${
+                summary.costUnknown === 1
+                  ? '1 línea vendida no tiene costo registrado y no cuenta'
+                  : `${summary.costUnknown} líneas vendidas no tienen costo registrado y no cuentan`
+              } en la utilidad: ${
+                summary.costUnknown === 1 ? 'es una venta rápida' : 'son ventas rápidas'
+              } sin costo, o de antes de que se guardara el costo en cada venta.</p>`
+            : ''
+        }
       </div>`
     hydrateIcons($('#r-cards'))
 

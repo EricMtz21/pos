@@ -79,6 +79,29 @@ electron.app.whenReady().then(async () => {
   await run(`document.querySelector('#scan').dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }))`)
   await waitFor(`document.querySelectorAll('.cart-row').length === 2`, 'se quita lo escaneado de prueba')
 
+  // ── Venta rápida: algo que no está en el catálogo ───────
+  await key('F6')
+  await waitFor(`document.querySelector('#quick-form')`, 'F6 abre la venta rápida')
+  check(
+    await run(`document.querySelector('[form="quick-form"]').disabled`),
+    'la venta rápida no debería dejar agregar sin concepto ni precio'
+  )
+  await run(`(() => { const f = document.querySelector('#quick-form')
+    f.name.value = 'Marco de madera'; f.name.dispatchEvent(new Event('input', { bubbles: true }))
+    f.price.value = '50'; f.price.dispatchEvent(new Event('input', { bubbles: true }))
+    f.cost.value = '30'; f.cost.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  await run(`document.querySelector('[form="quick-form"]').click()`)
+  await waitFor(`document.querySelectorAll('.cart-row').length === 3`, 'la línea suelta entra al carrito')
+  // 2 refrescos ($36) + arroz ($28) + el marco ($50) = $114.00
+  check(
+    /114\.00/.test(await run(`document.querySelector('#t-total').textContent`)),
+    'el total no tomó la venta rápida'
+  )
+  // Se quita: el resto de la prueba cuenta con el carrito de siempre.
+  await run(`(() => { document.querySelectorAll('.cart-row')[2].click()
+    document.querySelector('#scan').dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })) })()`)
+  await waitFor(`document.querySelectorAll('.cart-row').length === 2`, 'se quita la línea suelta')
+
   // ── Precio de línea y descuento ─────────────────────────
   await run(`document.querySelector('[data-act="price"]').click()`)
   await waitFor(`document.querySelector('#price-form')`, 'se abre el precio de línea')

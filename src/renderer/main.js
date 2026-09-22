@@ -97,6 +97,8 @@ async function start() {
   // El cajón se abre solo al cobrar en efectivo. Si no responde, el aviso llega aquí:
   // el cobro ya está hecho y el ticket impreso, así que solo hay que enterarse.
   window.api.drawer.onFail((mensaje) => toast(mensaje, 'error'))
+  // Lo mismo con la copia del respaldo: si la USB no está puesta, hay que enterarse.
+  window.api.backup.onFail((mensaje) => toast(mensaje, 'error'))
   register('F1', showHelp, 'Ayuda: lista de atajos')
   register('Ctrl+D', toggleTheme, 'Alternar modo claro/oscuro')
   register('Ctrl+P', reprintLast, 'Reimprimir último ticket')

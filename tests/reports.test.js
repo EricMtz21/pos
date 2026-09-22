@@ -227,3 +227,94 @@ test('Excel: un periodo sin ventas genera un archivo abrible, no uno corrupto', 
   // Sin filas no debe quedar un autofiltro vacío: Excel lo reporta como archivo dañado.
   assert.ok(!book.getWorksheet('Productos').autoFilter)
 })
+
+// ── Utilidad ─────────────────────────────────────────────────────────────────
+
+test('utilidad: ingreso sin IVA menos costo, con el descuento de venta ya restado', () => {
+  const { repos, a, b } = setup()
+  // Refresco: $18.00 con IVA → $15.52 sin IVA, costo $11.00 → $4.52 de utilidad.
+  // Arroz exento: $28.00 = $28.00 sin IVA, costo $21.00 → $7.00 de utilidad.
+  repos.sales.create({
+    items: [{ productId: a.id, qty: 1, unitPrice: 1800 }, { productId: b.id, qty: 1, unitPrice: 2800 }],
+    payments: [{ method: 'cash', amount: 4600 }]
+  })
+  const sinDescuento = repos.reports.summary(range())
+  assert.equal(sinDescuento.netRevenue, 1552 + 2800)
+  assert.equal(sinDescuento.cost, 1100 + 2100)
+  assert.equal(sinDescuento.profit, sinDescuento.netRevenue - sinDescuento.cost)
+
+  // El descuento sale de la ganancia, no del impuesto: $10 menos de venta, $10 menos
+  // de utilidad (menos su IVA, que tampoco se cobra).
+  repos.sales.create({
+    items: [{ productId: b.id, qty: 1, unitPrice: 2800 }],
+    discount: 1000,
+    payments: [{ method: 'cash', amount: 1800 }]
+  })
+  const conDescuento = repos.reports.summary(range())
+  assert.equal(conDescuento.netRevenue, 1552 + 2800 + 1800, 'el descuento no se restó del ingreso')
+  assert.equal(conDescuento.profit, conDescuento.netRevenue - conDescuento.cost)
+})
+
+test('utilidad: una devolución se lleva su ingreso y regresa su costo', () => {
+  const { repos, b } = setup()
+  const venta = repos.sales.create({
+    items: [{ productId: b.id, qty: 2, unitPrice: 2800 }],
+    payments: [{ method: 'cash', amount: 5600 }]
+  })
+  const [linea] = repos.returns.returnableItems(venta.id)
+  repos.returns.create({ saleId: venta.id, items: [{ saleItemId: linea.id, qty: 1 }] })
+
+  const r = repos.reports.summary(range())
+  assert.equal(r.netRevenue, 2800, 'quedó el ingreso de la pieza que sí se vendió')
+  assert.equal(r.cost, 2100, 'el costo de la devuelta volvió al inventario')
+  assert.equal(r.profit, 700)
+})
+
+test('una venta devuelta por completo no puede reportar pérdida: el dinero entró y salió', () => {
+  const { repos, b } = setup()
+  const venta = repos.sales.create({
+    items: [{ productId: b.id, qty: 1, unitPrice: 2800 }],
+    payments: [{ method: 'cash', amount: 2800 }]
+  })
+  const [linea] = repos.returns.returnableItems(venta.id)
+  repos.returns.create({ saleId: venta.id, items: [{ saleItemId: linea.id, qty: 1 }] })
+  assert.equal(repos.sales.get(venta.id).status, 'refunded')
+
+  const r = repos.reports.summary(range())
+  assert.equal(r.sales, 1, 'la venta ocurrió, aunque se devolviera entera')
+  assert.equal(r.gross, 2800)
+  assert.equal(r.returns, 2800)
+  assert.equal(r.net, 0, 'el neto es cero, no negativo')
+  assert.equal(r.profit, 0)
+})
+
+test('devolver una venta con descuento regresa lo que se pagó, no el precio de lista', () => {
+  const { repos, b } = setup()
+  // $28.00 con 10 % de descuento = $25.20 cobrados.
+  const venta = repos.sales.create({
+    items: [{ productId: b.id, qty: 1, unitPrice: 2800 }],
+    discount: 280,
+    payments: [{ method: 'cash', amount: 2520 }]
+  })
+  const [linea] = repos.returns.returnableItems(venta.id)
+  const devolucion = repos.returns.create({ saleId: venta.id, items: [{ saleItemId: linea.id, qty: 1 }] })
+  assert.equal(devolucion.total, 2520, 'se devolvió el precio de lista en vez de lo cobrado')
+  assert.equal(repos.reports.summary(range()).net, 0)
+})
+
+test('las líneas sin costo registrado se cuentan aparte, no como costo cero', () => {
+  const db = openDatabase(':memory:')
+  const repos = createRepos(db)
+  const p = repos.products.create({ name: 'Arroz', price_gross: 2800, cost: 2100, stock: 100, tax_rate: 0 })
+  const vieja = repos.sales.create({ items: [{ productId: p.id, qty: 1, unitPrice: 2800 }], payments: [{ method: 'cash', amount: 2800 }] })
+  repos.sales.create({ items: [{ productId: p.id, qty: 1, unitPrice: 2800 }], payments: [{ method: 'cash', amount: 2800 }] })
+
+  // Así quedan las ventas anteriores a la migración 005: sin costo congelado.
+  db.prepare('UPDATE sale_items SET cost = NULL WHERE sale_id = ?').run(vieja.id)
+
+  const r = repos.reports.summary(range())
+  assert.equal(r.costUnknown, 1, 'no avisó de la línea sin costo')
+  assert.equal(r.cost, 2100, 'la línea sin costo no debe sumar costo cero')
+  // El ingreso de ambas sí cuenta: lo que no se sabe es cuánto costó, no cuánto entró.
+  assert.equal(r.netRevenue, 5600)
+})

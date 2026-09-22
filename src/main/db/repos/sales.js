@@ -51,11 +51,31 @@ export function createSalesRepo(db, { settings, products, audit }) {
 
     return db.transaction(() => {
       // El nombre y la tasa de impuesto se toman del producto, no del carrito.
+      //
+      // Una línea sin `productId` es una venta rápida: algo que no está en el catálogo.
+      // Ahí no hay de dónde sacar el nombre ni la tasa, así que vienen de la pantalla y
+      // se validan aquí. No descuenta inventario: no existe la existencia de algo que
+      // nunca se dio de alta.
       const resolved = items.map((item) => {
+        if (item.productId === null || item.productId === undefined) {
+          const name = String(item.name ?? '').trim()
+          if (!name) throw new Error('La venta rápida necesita un concepto')
+          if (!Number.isInteger(item.unitPrice) || item.unitPrice < 0) {
+            throw new Error(`Precio inválido para «${name}»`)
+          }
+          if (!(item.taxRate >= 0 && item.taxRate <= 1)) throw new Error(`Impuesto inválido para «${name}»`)
+          if (item.cost !== null && item.cost !== undefined && !(Number.isInteger(item.cost) && item.cost >= 0)) {
+            throw new Error(`Costo inválido para «${name}»`)
+          }
+          if (!(item.qty > 0)) throw new Error(`Cantidad inválida para «${name}»`)
+          return { ...item, productId: null, name, taxRate: item.taxRate, cost: item.cost ?? null }
+        }
+
         const product = products.get(item.productId)
         if (!product) throw new Error(`Producto no encontrado: ${item.productId}`)
         if (!(item.qty > 0)) throw new Error(`Cantidad inválida para ${product.name}`)
-        return { ...item, name: product.name, taxRate: product.tax_rate }
+        // El costo se congela aquí: es lo que costó esta pieza el día que se vendió.
+        return { ...item, name: product.name, taxRate: product.tax_rate, cost: product.cost }
       })
 
       const totals = calculateTotals(resolved, { discount })
@@ -109,8 +129,9 @@ export function createSalesRepo(db, { settings, products, audit }) {
       const saleId = Number(lastInsertRowid)
 
       const insertItem = db.prepare(
-        `INSERT INTO sale_items (sale_id, product_id, name_snapshot, qty, unit_price, discount, line_total)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO sale_items (sale_id, product_id, name_snapshot, qty, unit_price, discount, line_total,
+                                 cost, tax_rate, discount_share)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       const insertPayment = db.prepare(
         'INSERT INTO payments (sale_id, method, amount, commission_amount) VALUES (?, ?, ?, ?)'
@@ -121,9 +142,15 @@ export function createSalesRepo(db, { settings, products, audit }) {
       )
 
       for (const line of totals.lines) {
-        insertItem.run(saleId, line.productId, line.name, line.qty, line.unitPrice, line.discount, line.lineTotal)
-        moveStock.run(line.qty, line.productId)
-        insertMove.run(line.productId, -line.qty, folio, userId)
+        insertItem.run(
+          saleId, line.productId, line.name, line.qty, line.unitPrice, line.discount, line.lineTotal,
+          line.cost, line.taxRate, line.discountShare
+        )
+        // La venta rápida no mueve inventario: no hay producto al que descontarle.
+        if (line.productId !== null) {
+          moveStock.run(line.qty, line.productId)
+          insertMove.run(line.productId, -line.qty, folio, userId)
+        }
       }
       for (const p of withCommission) insertPayment.run(saleId, p.method, p.amount, p.commission)
 

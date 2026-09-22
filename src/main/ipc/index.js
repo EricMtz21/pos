@@ -219,6 +219,20 @@ export function registerIpc({ repos, appInfo, backup, data, updater }) {
     return filePath
   })
 
+  /**
+   * Carpeta fuera de la máquina donde se copia cada respaldo automático. Se guarda en los
+   * ajustes; aquí solo se elige, porque solo el proceso principal puede abrir el diálogo.
+   */
+  handle('backup:chooseFolder', async (event) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(parentOf(event), {
+      title: 'Elegir carpeta para las copias de respaldo',
+      properties: ['openDirectory', 'createDirectory']
+    })
+    if (canceled || filePaths.length === 0) return null
+    settings.set({ backupFolder: filePaths[0] })
+    return filePaths[0]
+  })
+
   /** Solo inspecciona el archivo: la pantalla pide confirmación antes de restaurar. */
   handle('backup:inspect', async (event) => {
     const { canceled, filePaths } = await dialog.showOpenDialog(parentOf(event), {

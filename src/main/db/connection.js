@@ -12,6 +12,10 @@ export function openDatabase(file, { backupDir } = {}) {
   const db = new Database(file)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
+  // Si otra cosa está escribiendo (un respaldo con VACUUM, el antivirus, una segunda
+  // ventana), esperar medio segundo y reintentar en vez de fallar al instante. Sin esto,
+  // SQLite devuelve SQLITE_BUSY de inmediato y la venta se cae por un bloqueo pasajero.
+  db.pragma('busy_timeout = 5000')
 
   migrate(db, migrations, {
     beforeMigrate: () => backupDir && backupDatabase(db, backupDir, 'pre-migrate')

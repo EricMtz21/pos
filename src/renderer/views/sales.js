@@ -5,7 +5,7 @@ import { toast } from '../components/toast.js'
 import { confirmModal } from '../components/modal.js'
 import { openPayment } from './payment.js'
 import { showTicket } from './ticket-modal.js'
-import { openDiscount, openLinePrice } from './sale-dialogs.js'
+import { openDiscount, openLinePrice, openQuickLine } from './sale-dialogs.js'
 import { barcodeSvg } from '../components/barcode.js'
 import { calculateTotals } from '../../shared/business/totals.js'
 import { formatMoney } from '../../shared/money.js'
@@ -73,6 +73,7 @@ export async function renderSales(container) {
           <div class="totals-row grand"><span>Total</span><strong id="t-total">${formatMoney(0)}</strong></div>
           <button class="btn primary" id="btn-pay" disabled>Cobrar ${kbd('F12')}</button>
           <button class="btn ghost" id="btn-clear" disabled>Cancelar venta ${kbd('F8')}</button>
+          <button class="btn ghost" id="btn-quick">Venta rápida ${kbd('F6')}</button>
           <button class="btn ghost" id="btn-reprint">Último ticket ${kbd('Ctrl+P')}</button>
         </div>
       </aside>
@@ -101,7 +102,7 @@ export async function renderSales(container) {
       selected = Math.min(selected, cart.length - 1)
       cartBody.innerHTML = cart
         .map((line, i) => {
-          const excede = line.qty > line.stock
+          const excede = line.stock !== null && line.qty > line.stock
           return `<tr class="cart-row" data-i="${i}" aria-selected="${i === selected}">
             <td>
               ${escape(line.name)}
@@ -157,6 +158,25 @@ export async function renderSales(container) {
     closeResults()
     scan.value = ''
     renderCart()
+  }
+
+  /** Línea que no viene del catálogo: se agrega siempre aparte, nunca acumula con otra. */
+  async function quickLine() {
+    const linea = await openQuickLine()
+    if (!linea) return
+    cart.push({
+      productId: null,
+      name: linea.name,
+      qty: linea.qty,
+      unitPrice: linea.unitPrice,
+      listPrice: linea.unitPrice,
+      taxRate: linea.taxRate,
+      cost: linea.cost,
+      stock: null // sin catálogo no hay existencia contra la que avisar
+    })
+    selected = cart.length - 1
+    renderCart()
+    scan.focus()
   }
 
   const changeQty = (i, delta) => {
@@ -330,7 +350,13 @@ export async function renderSales(container) {
 
     try {
       const sale = await window.api.sales.create({
-        items: cart.map((l) => ({ productId: l.productId, qty: l.qty, unitPrice: l.unitPrice })),
+        items: cart.map((l) => ({
+          productId: l.productId,
+          qty: l.qty,
+          unitPrice: l.unitPrice,
+          // Solo viajan en la línea suelta; en la de catálogo, main los toma del producto.
+          ...(l.productId === null && { name: l.name, taxRate: l.taxRate, cost: l.cost })
+        })),
         payments: result.payments,
         discount,
         cashReceived: result.cashReceived
@@ -361,6 +387,7 @@ export async function renderSales(container) {
 
   payBtn.addEventListener('click', charge)
   clearBtn.addEventListener('click', clearSale)
+  container.querySelector('#btn-quick').addEventListener('click', quickLine)
   container.querySelector('#btn-reprint').addEventListener('click', reprint)
   discountBtn.addEventListener('click', aplicarDescuento)
 
@@ -381,6 +408,7 @@ export async function renderSales(container) {
     register('F2', () => (scan.focus(), scan.select()), 'Nueva venta / enfocar escáner'),
     register('F3', () => (scan.focus(), scan.select()), 'Buscar producto'),
     register('F4', charge, 'Elegir método de pago y cobrar'),
+    register('F6', quickLine, 'Venta rápida: algo que no está en el catálogo'),
     register('F7', aplicarDescuento, 'Descuento de la venta'),
     register('F12', charge, 'Cobrar'),
     register('F8', clearSale, 'Cancelar venta actual'),

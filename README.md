@@ -15,6 +15,8 @@ archivo local que puedes respaldar copiando y pegar.
 - **Inventario** con precios, costos, márgenes y alertas de stock bajo.
 - **Descuentos** sobre la venta, en pesos o en porcentaje, y **precio a mano** por línea
   para vender a granel o hacer un precio especial.
+- **Venta rápida** de algo que no está en el catálogo: concepto, precio y listo, sin parar
+  el mostrador para dar de alta un producto que no se va a repetir.
 - **Métodos de pago:** efectivo (con cálculo de cambio), débito, crédito, transferencia y
   pago mixto.
 - **Comisiones de tarjeta configurables por tramos**, con el porcentaje que baja según el
@@ -25,12 +27,15 @@ archivo local que puedes respaldar copiando y pegar.
 - **Reportes por rango de fechas** con gráficos de venta diaria, reparto por método de
   pago y ranking de productos, más el detalle en tabla y exportación a Excel. También se
   busca una venta por folio, sin acertar la fecha.
+- **Ganancia real:** cada venta guarda el costo de lo que salió, así que el reporte dice
+  cuánto se ganó, no solo cuánto entró. El IVA no cuenta como ganancia.
 - **Corte de caja** con arqueo: compara lo que debería haber en el cajón contra lo que
   contaste y registra la diferencia.
 - **Devoluciones y cancelaciones**, con reposición automática de stock.
 - **Usuarios con PIN y roles** (administrador y cajero), opcionales.
 - **Historial** de cambios de precio y movimientos de inventario.
-- **Respaldos y restauración** de la base de datos, con respaldo automático diario.
+- **Respaldos y restauración** de la base de datos, con respaldo automático diario y copia
+  a una carpeta fuera de la computadora (una USB, otro disco, una carpeta sincronizada).
 - **Actualizaciones** desde la propia aplicación, sin perder datos.
 - **Modo claro y oscuro**, con acento configurable.
 
@@ -59,6 +64,7 @@ Cada botón muestra su atajo. `F1` abre la lista completa desde cualquier pantal
 | `F2` | Nueva venta / enfocar el escáner |
 | `F3` | Buscar producto |
 | `F4` | Elegir método de pago y cobrar |
+| `F6` | Venta rápida (algo fuera del catálogo) |
 | `F7` | Descuento de la venta |
 | `F8` | Cancelar la venta en curso |
 | `F12` | Cobrar |

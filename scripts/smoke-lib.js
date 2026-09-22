@@ -1,7 +1,8 @@
 // Utilidades compartidas por las pruebas de humo.
 // Nota: Electron debe arrancar SIN `ELECTRON_RUN_AS_NODE`, o corre como Node puro.
 import electron from 'electron'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, mkdirSync, rmSync, readdirSync, statSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -9,8 +10,34 @@ const { app, BrowserWindow } = electron
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-/** Carga el bundle de main (out/) para arrancar la app real. */
-export const bootApp = (dir) => import(pathToFileURL(join(dir, '../out/main/index.cjs')).href)
+/**
+ * Carga el bundle de main (out/) para arrancar la app real.
+ *
+ * Cada corrida estrena carpeta de datos, por dos razones: las pruebas afirman cuentas
+ * exactas (8 productos del seed) y no pueden heredar lo de la corrida anterior, y la app
+ * solo admite una instancia por carpeta — dos pruebas seguidas se pisarían mientras la
+ * anterior termina de cerrarse, y la segunda se cerraría sola sin decir por qué.
+ */
+export const bootApp = (dir) => {
+  if (!process.env.POS_DATA_DIR) {
+    const raiz = join(tmpdir(), 'pos-smoke')
+    mkdirSync(raiz, { recursive: true })
+    // De paso se barren las de corridas viejas, pero solo las de hace rato: borrar la
+    // carpeta de la corrida que acaba de terminar es justo lo más caro (es la más llena,
+    // y el proceso puede seguir cerrándose) y compite por el disco mientras la app
+    // arranca. Con la suite completa eso provocaba esperas agotadas en pruebas al azar.
+    const HACE_RATO = 30 * 60 * 1000
+    for (const vieja of readdirSync(raiz)) {
+      try {
+        if (Date.now() - statSync(join(raiz, vieja)).mtimeMs < HACE_RATO) continue
+        rmSync(join(raiz, vieja), { recursive: true, force: true })
+      } catch {}
+    }
+    process.env.POS_DATA_DIR = join(raiz, `${Date.now()}-${process.pid}`)
+  }
+  process.env.POS_SEED ??= '1'
+  return import(pathToFileURL(join(dir, '../out/main/index.cjs')).href)
+}
 
 /**
  * Prepara el contexto de una prueba: ventana lista, helpers de DOM y capturas.
@@ -30,7 +57,10 @@ export async function setup({ prefix = 'smoke' } = {}) {
 
   // `Promise.resolve(...)` admite tanto condiciones síncronas como llamadas a window.api:
   // sin él, `Boolean(unaPromesa)` sería siempre cierto y la espera terminaría de inmediato.
-  const waitFor = async (js, label, timeout = 5000) => {
+  // 10 s no es tiempo de respuesta esperado, es margen: cada corrida estrena carpeta de
+  // datos y el antivirus la revisa mientras la app arranca. Con 5 s fallaba una de cada
+  // pocas corridas seguidas, y siempre en un paso distinto: ruido, no un defecto.
+  const waitFor = async (js, label, timeout = 10000) => {
     for (let waited = 0; waited < timeout; waited += 50) {
       if (await run(`Promise.resolve(${js}).then(Boolean)`)) return true
       await sleep(50)

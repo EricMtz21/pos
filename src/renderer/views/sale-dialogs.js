@@ -116,3 +116,92 @@ export function openLinePrice(line) {
     }
   })
 }
+
+/**
+ * Venta rápida: una línea suelta que no está en el catálogo.
+ *
+ * Con piezas únicas siempre acaba llegando algo sin dar de alta, y parar el mostrador
+ * para crear un producto que no se va a repetir no tiene sentido. No toca inventario:
+ * no hay existencia que descontar de algo que nunca se registró.
+ *
+ * El costo se pide, pero es opcional: si se sabe, la ganancia del periodo lo refleja;
+ * si no, la línea se cuenta aparte en vez de pasar por ganancia pura.
+ */
+export function openQuickLine() {
+  return openModal({
+    title: 'Venta rápida',
+    body: `
+      <form id="quick-form" class="form-grid">
+        <label class="field full">
+          <span>Concepto *</span>
+          <input name="name" autocomplete="off" maxlength="80" placeholder="Lo que se está vendiendo" />
+          <span class="hint">Es lo que saldrá en el ticket y en los reportes.</span>
+        </label>
+        <label class="field">
+          <span>Precio con IVA *</span>
+          <input name="price" inputmode="decimal" autocomplete="off" placeholder="0.00" />
+        </label>
+        <label class="field">
+          <span>Cantidad</span>
+          <input name="qty" inputmode="decimal" autocomplete="off" value="1" />
+        </label>
+        <label class="field">
+          <span>Impuesto</span>
+          <select name="taxRate">
+            <option value="0.16">IVA 16 %</option>
+            <option value="0">Exento</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Costo (opcional)</span>
+          <input name="cost" inputmode="decimal" autocomplete="off" placeholder="—" />
+          <span class="hint">Lo que costó comprarlo, sin IVA. Solo sirve para la ganancia.</span>
+        </label>
+      </form>
+      <div class="change-box" style="margin-top:16px">
+        <span>Importe</span><strong id="quick-total">—</strong>
+      </div>`,
+    footer: `<button class="btn" type="button" data-close>Cancelar</button>
+             <button class="btn primary" type="submit" form="quick-form">Agregar al carrito</button>`,
+    onMount: ({ dialog, close }) => {
+      const form = dialog.querySelector('#quick-form')
+      const aceptar = dialog.querySelector('[form="quick-form"]')
+
+      const leer = () => {
+        const price = parseMoney(form.price.value)
+        const qty = Number(form.qty.value)
+        const cost = form.cost.value.trim() === '' ? null : parseMoney(form.cost.value)
+        return {
+          name: form.name.value.trim(),
+          price,
+          qty: Number.isFinite(qty) && qty > 0 ? Number(qty.toFixed(3)) : null,
+          cost,
+          taxRate: Number(form.taxRate.value)
+        }
+      }
+
+      const refrescar = () => {
+        const v = leer()
+        // El costo queda vacío mientras no se escriba; escrito, tiene que ser un importe.
+        const costoEscrito = form.cost.value.trim() !== ''
+        const valido = Boolean(v.name) && v.price !== null && v.qty !== null && (!costoEscrito || v.cost !== null)
+        dialog.querySelector('#quick-total').textContent =
+          v.price === null || v.qty === null ? '—' : formatMoney(Math.round(v.qty * v.price))
+        form.price.setAttribute('aria-invalid', form.price.value.trim() !== '' && v.price === null)
+        form.cost.setAttribute('aria-invalid', costoEscrito && v.cost === null)
+        aceptar.disabled = !valido
+      }
+
+      for (const campo of ['name', 'price', 'qty', 'cost']) form[campo].addEventListener('input', refrescar)
+      refrescar()
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault()
+        const v = leer()
+        if (!v.name || v.price === null || v.qty === null) return
+        close({ name: v.name, unitPrice: v.price, qty: v.qty, taxRate: v.taxRate, cost: v.cost })
+      })
+      form.name.focus()
+    }
+  })
+}
