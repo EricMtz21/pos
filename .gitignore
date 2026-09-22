@@ -5,6 +5,8 @@ release/
 
 # Datos locales de desarrollo (base de datos y respaldos)
 .dev-data/
+# Tienda de ejemplo generada por `npm run demo`
+.demo-data/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm

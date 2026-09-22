@@ -188,6 +188,7 @@ POS_SEED=1 npm run dev
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` | Arranca la app con recarga en caliente |
+| `npm run demo` | Llena una tienda de ejemplo y abre la app con ella |
 | `npm run build` | Compila a `out/` |
 | `npm run dist` | Genera el instalador y la versión portable en `release/` |
 | `npm test` | Pruebas de la lógica de negocio y la capa de datos |
@@ -196,6 +197,17 @@ POS_SEED=1 npm run dev
 | `npm run smoke:reports` | Prueba de interfaz: reportes, corte de caja y exportación |
 | `npm run smoke:settings` | Prueba de interfaz: ajustes, respaldo y restauración |
 | `npm run smoke:extras` | Prueba de interfaz: devoluciones, roles e historial |
+
+## Probarlo con datos de ejemplo
+
+`npm run demo` genera una tienda completa —32 productos, seis semanas de ventas,
+devoluciones, una cancelación y doce cortes de caja— y abre la aplicación apuntando a
+ella. Los datos viven en `.demo-data/` y no tocan la instalación real.
+
+Las ventas se crean con el mismo código que el mostrador y solo después se les cambia la
+fecha, así que los totales, el IVA y las comisiones son los que el programa habría
+calculado, no números escritos a mano. El azar tiene semilla fija: la misma tienda en
+cada corrida.
 
 ## Dónde viven los datos
 
