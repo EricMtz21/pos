@@ -36,6 +36,9 @@ const CARRITO_VACIO = `
   </div>`
 
 export async function renderSales(container) {
+  // Cómo sale el ticket al cobrar: directo por la impresora, o en pantalla para decidir.
+  const ticketConfig = (await window.api.settings.get()).ticket
+
   /** @type {{productId, name, unit, qty, unitPrice, taxRate, stock}[]} */
   let cart = []
   let discount = 0 // descuento de la venta, en centavos
@@ -53,7 +56,10 @@ export async function renderSales(container) {
           <div id="results" class="results" role="listbox"></div>
         </div>
         <div class="cart-wrap">
-          <table>
+          <table class="table-fija">
+            <colgroup>
+              <col /><col style="width:118px" /><col style="width:124px" /><col style="width:112px" /><col style="width:52px" />
+            </colgroup>
             <thead>
               <tr><th>Producto</th><th class="num">Precio</th><th class="num">Cantidad</th><th class="num">Importe</th><th></th></tr>
             </thead>
@@ -104,7 +110,7 @@ export async function renderSales(container) {
         .map((line, i) => {
           const excede = line.stock !== null && line.qty > line.stock
           return `<tr class="cart-row" data-i="${i}" aria-selected="${i === selected}">
-            <td>
+            <td class="recorta" title="${escape(line.name)}">
               ${escape(line.name)}
               ${excede ? `<div class="stock-warn">Supera el stock (${line.stock})</div>` : ''}
             </td>
@@ -364,8 +370,25 @@ export async function renderSales(container) {
       cart = []
       discount = 0
       renderCart()
-      toast(`Venta ${sale.folio} · ${formatMoney(sale.total)}`)
-      await showTicket(sale, { highlightChange: true })
+
+      // Con impresora elegida e impresión automática, el ticket sale y el cajero sigue
+      // cobrando: parar cada venta en un diálogo para pulsar «Imprimir» son dos clics de
+      // más en un mostrador. El cambio, que es lo único que hay que leer en ese momento,
+      // se dice en el aviso. Si la impresión falla se enseña el ticket, que es la salida:
+      // se puede reimprimir o guardar en PDF sin volver a cobrar.
+      const cambio = sale.change_amount ? ` · Cambio ${formatMoney(sale.change_amount)}` : ''
+      if (ticketConfig.autoPrint && ticketConfig.printer) {
+        toast(`Venta ${sale.folio} · ${formatMoney(sale.total)}${cambio}`)
+        try {
+          await window.api.ticket.print(sale.id)
+        } catch (err) {
+          toast(err.message, 'error')
+          await showTicket(sale, { highlightChange: true })
+        }
+      } else {
+        toast(`Venta ${sale.folio} · ${formatMoney(sale.total)}${cambio}`)
+        await showTicket(sale, { highlightChange: true })
+      }
     } catch (err) {
       toast(err.message, 'error')
     } finally {

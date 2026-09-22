@@ -64,6 +64,16 @@ electron.app.whenReady().then(async () => {
     'la vista previa de 80 mm excede los 48 caracteres'
   )
 
+  // ── Imprimir al cobrar: sin impresora, ni se puede encender ──
+  check(
+    await run(`document.querySelector('#s-autoprint').disabled`),
+    'la impresión automática no debe poder encenderse sin impresora elegida'
+  )
+  check(
+    /Elige primero una impresora/.test(await run(`document.querySelector('#s-autoprint-hint').textContent`)),
+    'no se explica por qué está apagada la impresión automática'
+  )
+
   // ── Copia del respaldo fuera de la máquina ──
   // Se comprueba de punta a punta: se elige carpeta, se respalda y el archivo aparece allá.
   const fuera = join(electron.app.getPath('temp'), `pos-usb-${Date.now()}`)

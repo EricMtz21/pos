@@ -72,6 +72,15 @@ export async function renderSettings(container) {
               se abre el diálogo de Windows en cada venta.</span></label>
         </form>
 
+        <div class="setting-row" style="margin-top:16px">
+          <label class="switch">
+            <input type="checkbox" id="s-autoprint" ${settings.ticket.autoPrint ? ' checked' : ''}
+                   ${settings.ticket.printer ? '' : ' disabled'} />
+            <span>Imprimir el ticket al cobrar</span>
+          </label>
+          <p class="hint" id="s-autoprint-hint"></p>
+        </div>
+
         <div class="button-row" style="margin-top:14px">
           <button class="btn" type="button" id="s-test-print">${icon('printer')}Imprimir ticket de prueba</button>
         </div>
@@ -258,8 +267,18 @@ export async function renderSettings(container) {
     }
   }))
 
+  // OJO: `save` compara el parche contra `settings` para no escribir de más, así que aquí
+  // se construye un objeto nuevo y NO se toca `settings.ticket`. Mutarlo antes de guardar
+  // hacía que el parche saliera idéntico a lo guardado y no se escribiera nada.
   autosave($('#s-ticket'), (f) => ({
-    ticket: { ...settings.ticket, width: Number(f.width.value), printer: f.printer.value }
+    ticket: {
+      ...settings.ticket,
+      width: Number(f.width.value),
+      printer: f.printer.value,
+      // Quedarse sin impresora apaga la impresión automática: encendida sin impresora,
+      // cada venta abriría el diálogo de Windows, justo lo que este ajuste evita.
+      autoPrint: f.printer.value ? $('#s-autoprint').checked : false
+    }
   }))
 
   autosave($('#s-inventory'), (f) => ({ lowStockThreshold: Number(f.lowStockThreshold.value) }))
@@ -282,6 +301,25 @@ export async function renderSettings(container) {
     $('#s-printer').innerHTML = `<option value="">No se pudieron listar las impresoras</option>`
     console.error(err)
   }
+
+  // ── Imprimir al cobrar ──
+  // Sin impresora elegida no se puede: Windows abriría su diálogo en cada venta, que es
+  // justo lo que este ajuste evita. Por eso la casilla queda apagada hasta elegir una.
+  function paintAutoPrint(hayImpresora = Boolean($('#s-printer').value || settings.ticket.printer)) {
+    if (!hayImpresora) $('#s-autoprint').checked = false
+    $('#s-autoprint').disabled = !hayImpresora
+    $('#s-autoprint-hint').textContent = hayImpresora
+      ? 'El ticket sale solo y la caja sigue libre. Sin esto, cada venta termina en una ventana con el ticket.'
+      : 'Elige primero una impresora arriba: sin ella, Windows preguntaría en cada venta.'
+  }
+  paintAutoPrint()
+
+  $('#s-autoprint').addEventListener('change', () =>
+    save({ ticket: { ...settings.ticket, autoPrint: $('#s-autoprint').checked } })
+  )
+
+  // Cambiar de impresora reevalúa la casilla: el ajuste ya lo guardó el autosave de arriba.
+  $('#s-printer').addEventListener('change', () => paintAutoPrint())
 
   // ── Cajón de dinero ──
   // Se ofrecen las impresoras y, además, los puertos: una impresora vieja conectada por

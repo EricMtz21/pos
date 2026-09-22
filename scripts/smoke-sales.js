@@ -98,7 +98,7 @@ electron.app.whenReady().then(async () => {
     'el total no tomó la venta rápida'
   )
   // Se quita: el resto de la prueba cuenta con el carrito de siempre.
-  await run(`(() => { document.querySelectorAll('.cart-row')[2].click()
+  await run(`(() => { document.querySelectorAll('.cart-row')[2]?.click()
     document.querySelector('#scan').dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })) })()`)
   await waitFor(`document.querySelectorAll('.cart-row').length === 2`, 'se quita la línea suelta')
 
@@ -193,6 +193,43 @@ electron.app.whenReady().then(async () => {
 
   await run(`document.querySelector('dialog[open]').close()`)
   await sleep(300)
+
+  // ── Con impresora elegida, el ticket sale solo ──────────
+  // La impresión de verdad necesita una impresora enchufada; aquí se comprueba el flujo:
+  // que se mande a imprimir, que NO se abra el diálogo y que el cambio se diga en el aviso.
+  const impresos = []
+  electron.ipcMain.removeHandler('ticket:print')
+  electron.ipcMain.handle('ticket:print', (_e, id) => {
+    impresos.push(id)
+    return { ok: true, data: true }
+  })
+
+  await run(`window.api.settings.set({ ticket: { width: 58, printer: 'Impresora de prueba', autoPrint: true } })`)
+  await key('r', { ctrlKey: true })
+  await waitFor(`document.querySelector('#r-cards')`, 'se sale de Ventas para releer los ajustes')
+  await key('F2')
+  await waitFor(`document.querySelector('#scan')`, 'se vuelve a Ventas')
+
+  await scanCode('7501000222222')
+  await key('F12')
+  await waitFor(`document.querySelector('#pay-amount')`, 'cobro con impresión automática')
+  // El segundo botón de efectivo es siempre el primer billete por encima del total: así
+  // hay cambio que anunciar sin depender de cuánto costaba lo que se escaneó.
+  await run(`[...document.querySelectorAll('[data-cash]')][1].click()`)
+  await run(`document.querySelector('#pay-confirm').click()`)
+  await waitFor(
+    `[...document.querySelectorAll('.toast')].some(t => /Cambio/.test(t.textContent))`,
+    'el aviso dice el cambio, que es lo único que hay que leer al cobrar'
+  )
+  // El aviso sale antes de mandar a imprimir (la caja no espera al papel), así que hay
+  // que esperar a la impresión y no darla por hecha al ver el aviso.
+  for (let esperado = 0; esperado < 5000 && impresos.length === 0; esperado += 100) await sleep(100)
+  check(impresos.length === 1, `se mandaron ${impresos.length} tickets a imprimir, se esperaba 1`)
+  check(
+    !(await run(`Boolean(document.querySelector('#ticket-text'))`)),
+    'con impresión automática no debe abrirse el diálogo del ticket'
+  )
+  await run(`window.api.settings.set({ ticket: { width: 58, printer: '', autoPrint: false } })`)
 
   // ── F8 cancela la venta en curso ────────────────────────
   await scanCode('7501000222222')

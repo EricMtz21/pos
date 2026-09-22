@@ -22,7 +22,8 @@ archivo local que puedes respaldar copiando y pegar.
 - **Comisiones de tarjeta configurables por tramos**, con el porcentaje que baja según el
   volumen acumulado del mes. Al cobrar ves cuánto recibe realmente el negocio.
 - **Ticket** para impresora térmica de 58 u 80 mm, o exportado a PDF. Con una impresora
-  fija sale directo, sin diálogo de Windows en cada venta.
+  fija sale directo, sin diálogo de Windows en cada venta, y puede imprimirse solo al
+  cobrar para no parar la caja.
 - **Cajón de dinero:** se abre solo al cobrar en efectivo, a través de la impresora.
 - **Reportes por rango de fechas** con gráficos de venta diaria, reparto por método de
   pago y ranking de productos, más el detalle en tabla y exportación a Excel. También se

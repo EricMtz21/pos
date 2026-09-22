@@ -1,7 +1,9 @@
 /* ── Pantalla de venta ───────────────────────────────────── */
 .sale {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 330px;
+  /* El panel de totales solo tiene que caber; el ancho que sobre es para el carrito,
+     donde el cajero lee los nombres de lo que está cobrando. */
+  grid-template-columns: minmax(0, 1fr) 296px;
   gap: 20px;
   height: 100%;
   min-height: 0;

@@ -161,9 +161,22 @@ table {
   font-variant-numeric: tabular-nums;
 }
 
+/* Tabla que nunca se desborda a lo ancho: los anchos los fija el <colgroup> y la columna
+   que sobra (el nombre) se recorta con puntos suspensivos. Con anchos automáticos, un
+   nombre largo —«S.H.Figuarts Son Goku Super Saiyan»— empujaba la tabla fuera de la
+   pantalla y obligaba a desplazarse de lado para ver el stock. */
+.table-fija {
+  table-layout: fixed;
+}
+
+.recorta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 th,
 td {
-  padding: 11px 16px;
+  padding: 11px 14px;
   text-align: left;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;

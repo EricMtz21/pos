@@ -1,9 +1,9 @@
 // Utilidades compartidas por las pruebas de humo.
 // Nota: Electron debe arrancar SIN `ELECTRON_RUN_AS_NODE`, o corre como Node puro.
 import electron from 'electron'
-import { writeFileSync, mkdirSync, rmSync, readdirSync, statSync } from 'node:fs'
+import { writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const { app, BrowserWindow } = electron
@@ -13,27 +13,27 @@ export const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 /**
  * Carga el bundle de main (out/) para arrancar la app real.
  *
- * Cada corrida estrena carpeta de datos, por dos razones: las pruebas afirman cuentas
- * exactas (8 productos del seed) y no pueden heredar lo de la corrida anterior, y la app
- * solo admite una instancia por carpeta — dos pruebas seguidas se pisarían mientras la
- * anterior termina de cerrarse, y la segunda se cerraría sola sin decir por qué.
+ * Cada prueba tiene su carpeta de datos y la estrena vacía, por dos razones: afirman
+ * cuentas exactas (8 productos del seed) y no pueden heredar lo de la corrida anterior, y
+ * la app solo admite una instancia por carpeta — dos pruebas distintas seguidas se
+ * pisarían mientras la anterior termina de cerrarse, y la segunda se cerraría sola sin
+ * decir por qué.
  */
 export const bootApp = (dir) => {
   if (!process.env.POS_DATA_DIR) {
-    const raiz = join(tmpdir(), 'pos-smoke')
-    mkdirSync(raiz, { recursive: true })
-    // De paso se barren las de corridas viejas, pero solo las de hace rato: borrar la
-    // carpeta de la corrida que acaba de terminar es justo lo más caro (es la más llena,
-    // y el proceso puede seguir cerrándose) y compite por el disco mientras la app
-    // arranca. Con la suite completa eso provocaba esperas agotadas en pruebas al azar.
-    const HACE_RATO = 30 * 60 * 1000
-    for (const vieja of readdirSync(raiz)) {
-      try {
-        if (Date.now() - statSync(join(raiz, vieja)).mtimeMs < HACE_RATO) continue
-        rmSync(join(raiz, vieja), { recursive: true, force: true })
-      } catch {}
+    // Una carpeta fija por prueba, que se vacía al arrancar. Con una carpeta nueva en cada
+    // corrida (con la fecha en el nombre) el antivirus revisaba un árbol entero recién
+    // creado justo mientras la app arrancaba, y saltaban esperas agotadas en pasos al azar.
+    const nombre = basename(process.argv[1] ?? 'smoke', '.js')
+    const carpeta = join(tmpdir(), 'pos-smoke', nombre)
+    try {
+      rmSync(carpeta, { recursive: true, force: true })
+    } catch {
+      // En Windows, si la corrida anterior todavía se está cerrando, el borrado falla con
+      // EPERM. No es un fallo de la prueba: se sigue con lo que haya.
     }
-    process.env.POS_DATA_DIR = join(raiz, `${Date.now()}-${process.pid}`)
+    mkdirSync(carpeta, { recursive: true })
+    process.env.POS_DATA_DIR = carpeta
   }
   process.env.POS_SEED ??= '1'
   return import(pathToFileURL(join(dir, '../out/main/index.cjs')).href)
@@ -53,7 +53,18 @@ export async function setup({ prefix = 'smoke' } = {}) {
   if (!win) throw new Error('No se abrió ninguna ventana')
 
   const problems = []
-  const run = (js) => win.webContents.executeJavaScript(js)
+
+  // Un fallo al evaluar en la pantalla decía solo «Script failed to execute», sin pista de
+  // qué expresión reventó: con veinte llamadas por prueba eso no sirve para nada. Aquí se
+  // añade la expresión al mensaje, que es lo primero que uno quiere ver.
+  const run = async (js) => {
+    try {
+      return await win.webContents.executeJavaScript(js)
+    } catch (err) {
+      const corta = js.trim().replace(/\s+/g, ' ').slice(0, 140)
+      throw new Error(`falló al evaluar «${corta}» · ${err.message}`)
+    }
+  }
 
   // `Promise.resolve(...)` admite tanto condiciones síncronas como llamadas a window.api:
   // sin él, `Boolean(unaPromesa)` sería siempre cierto y la espera terminaría de inmediato.
@@ -70,8 +81,11 @@ export async function setup({ prefix = 'smoke' } = {}) {
       toast: [...document.querySelectorAll('.toast')].at(-1)?.textContent.trim() ?? '(ninguno)',
       dialog: document.querySelector('dialog[open] h2')?.textContent ?? '(ninguno)'
     })`).catch(() => ({ toast: '?', dialog: '?' }))
-    problems.push(`agotó la espera: ${label} · último aviso: "${contexto.toast}" · modal abierto: ${contexto.dialog}`)
-    return false
+    const detalle = `agotó la espera: ${label} · último aviso: "${contexto.toast}" · modal abierto: ${contexto.dialog}`
+    problems.push(detalle)
+    // Y se corta aquí. Antes seguía adelante, y lo que se veía en la salida era el error
+    // de dos pasos después —un `null.click()`— en vez de la espera que de verdad falló.
+    throw new Error(detalle)
   }
 
   return {

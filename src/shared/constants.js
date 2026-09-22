@@ -13,7 +13,9 @@ export const SETTINGS_DEFAULTS = {
   accent: '#3B82F6',
   lowStockThreshold: 5,
   business: { name: 'Mi Negocio', address: '', taxId: '', phone: '', footer: '¡Gracias por su compra!' },
-  ticket: { width: 58, printer: '' },
+  // `autoPrint`: al cobrar, el ticket sale solo por la impresora elegida y no se abre
+  // el diálogo. Sin impresora elegida no tiene sentido (Windows preguntaría en cada venta).
+  ticket: { width: 58, printer: '', autoPrint: false },
   // El cajón cuelga de la impresora, no de la computadora. `target` vacío significa
   // «la misma del ticket»; también acepta un puerto directo (COM1, LPT1).
   cashDrawer: { enabled: false, target: '', pin: 0 },

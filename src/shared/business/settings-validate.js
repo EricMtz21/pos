@@ -31,6 +31,9 @@ const VALIDATORS = {
     const errors = []
     if (!TICKET_WIDTHS.includes(v.width)) errors.push('El ancho del ticket debe ser 58 u 80 mm')
     if ('printer' in v && !isString(v.printer)) errors.push('La impresora debe ser texto')
+    if ('autoPrint' in v && typeof v.autoPrint !== 'boolean') {
+      errors.push('«Imprimir al cobrar» debe ser sí o no')
+    }
     return errors
   },
 

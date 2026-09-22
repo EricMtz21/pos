@@ -15,7 +15,7 @@ function rowHtml(p) {
   const m = margin(p.price_net, p.cost)
   return `<tr data-id="${p.id}">
     <td class="muted">${escape(p.code) || '—'}</td>
-    <td>${escape(p.name)}</td>
+    <td class="recorta" title="${escape(p.name)}">${escape(p.name)}</td>
     <td class="num">${formatMoney(p.price_gross)}</td>
     <td class="num muted">${formatMoney(p.price_net)}</td>
     <td class="num muted">${m === null ? '—' : `${m.toFixed(0)} %`}</td>
@@ -83,7 +83,14 @@ export async function renderInventory(container) {
       }
     </div>
     <div class="table-wrap">
-      <table>
+      <table class="table-fija">
+        <colgroup>
+          <!-- El código lleva 13 dígitos y no se recorta: es lo que se compara contra la
+               etiqueta. Lo que sobra se lo queda el nombre, que sí puede llevar puntos
+               suspensivos porque se lee completo en el título y en la ficha. -->
+          <col style="width:152px" /><col /><col style="width:104px" /><col style="width:100px" />
+          <col style="width:76px" /><col style="width:78px" /><col style="width:156px" />
+        </colgroup>
         <thead>
           <tr>
             <th>Código</th><th>Producto</th>
