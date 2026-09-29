@@ -62,8 +62,10 @@
   margin-bottom: 30px;
 }
 
+/* Dos grupos lado a lado solo si a cada tarjeta le cabe una cifra de seis dígitos.
+   Con 340px se juntaban a 1280×800 y «$105,561.00» se salía de la tarjeta. */
 .card-group {
-  flex: 1 1 340px;
+  flex: 1 1 560px;
 }
 
 /* La nota de las líneas sin costo cuelga del grupo, no de una tarjeta. */
@@ -86,6 +88,7 @@
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
+  container-type: inline-size;
 }
 
 /* El icono es un apoyo, no un dato: se asoma por la esquina en vez de competir
@@ -123,8 +126,9 @@
   color: var(--text-muted);
 }
 
+/* Se encoge con la tarjeta: un mes de siete dígitos no debe recortarse. */
 .report-card strong {
-  font-size: 21px;
+  font-size: clamp(15px, 13cqi, 21px);
   font-weight: 700;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;

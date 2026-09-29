@@ -190,6 +190,7 @@ POS_SEED=1 npm run dev
 |---|---|
 | `npm run dev` | Arranca la app con recarga en caliente |
 | `npm run demo` | Llena una tienda de ejemplo y abre la app con ella |
+| `npm run capturas` | Rehace las capturas de `docs/` sobre la tienda de ejemplo |
 | `npm run build` | Compila a `out/` |
 | `npm run dist` | Genera el instalador y la versión portable en `release/` |
 | `npm test` | Pruebas de la lógica de negocio y la capa de datos |

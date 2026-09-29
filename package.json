@@ -19,6 +19,7 @@
     "smoke:reports": "electron scripts/smoke-reports.js",
     "smoke:settings": "electron scripts/smoke-settings.js",
     "smoke:extras": "electron scripts/smoke-extras.js",
+    "capturas": "electron-vite build && node scripts/demo.js datos && electron scripts/capturas.js",
     "dist": "electron-vite build && electron-builder --win --publish never"
   },
   "devDependencies": {
